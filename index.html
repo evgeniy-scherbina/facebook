@@ -162,57 +162,75 @@
         const sendButton = document.getElementById('sendButton');
         const statusDiv = document.getElementById('status');
 
-        let ws = null;
+        // Service URLs - can be configured via environment or defaults
+        const MESSAGE_SERVICE_URL = window.MESSAGE_SERVICE_URL || 'http://localhost:8080';
+        const NOTIFICATION_SERVICE_URL = window.NOTIFICATION_SERVICE_URL || 'http://localhost:8081';
+
+        let eventSource = null;
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
 
-        function connect() {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
+        function connectSSE() {
+            const sseUrl = `${NOTIFICATION_SERVICE_URL}/events?client_id=${Date.now()}`;
             
-            ws = new WebSocket(wsUrl);
+            eventSource = new EventSource(sseUrl);
 
-            ws.onopen = () => {
+            eventSource.onopen = () => {
                 statusDiv.textContent = 'Connected';
                 statusDiv.className = 'status connected';
                 messageInput.disabled = false;
                 sendButton.disabled = false;
                 reconnectAttempts = 0;
-                addSystemMessage('Connected to chat!');
+                addSystemMessage('Connected to real-time notifications!');
             };
 
-            ws.onmessage = (event) => {
-                addMessage(event.data);
+            eventSource.onmessage = (event) => {
+                if (event.data.startsWith(':')) {
+                    // Skip ping/keepalive messages
+                    return;
+                }
+                
+                try {
+                    const notification = JSON.parse(event.data);
+                    if (notification.type === 'message') {
+                        const displayText = notification.user 
+                            ? `${notification.user}: ${notification.content}`
+                            : notification.content;
+                        addMessage(displayText, notification.timestamp);
+                    }
+                } catch (e) {
+                    console.error('Error parsing notification:', e);
+                }
             };
 
-            ws.onclose = () => {
+            eventSource.onerror = (error) => {
+                console.error('SSE error:', error);
                 statusDiv.textContent = 'Disconnected';
                 statusDiv.className = 'status disconnected';
                 messageInput.disabled = true;
                 sendButton.disabled = true;
-                addSystemMessage('Disconnected from chat. Attempting to reconnect...');
                 
-                if (reconnectAttempts < maxReconnectAttempts) {
-                    reconnectAttempts++;
-                    setTimeout(connect, 2000 * reconnectAttempts);
-                } else {
-                    addSystemMessage('Failed to reconnect. Please refresh the page.');
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    addSystemMessage('Disconnected from notifications. Attempting to reconnect...');
+                    
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        setTimeout(connectSSE, 2000 * reconnectAttempts);
+                    } else {
+                        addSystemMessage('Failed to reconnect. Please refresh the page.');
+                    }
                 }
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-                addSystemMessage('Connection error occurred.');
             };
         }
 
-        function addMessage(text) {
+        function addMessage(text, timestamp) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message';
             
             const timeDiv = document.createElement('div');
             timeDiv.className = 'message-time';
-            timeDiv.textContent = new Date().toLocaleTimeString();
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+            timeDiv.textContent = time;
             
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
@@ -244,11 +262,40 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const message = messageInput.value.trim();
-            if (message && ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(message);
-                messageInput.value = '';
+            if (!message) {
+                return;
+            }
+
+            sendButton.disabled = true;
+            messageInput.disabled = true;
+
+            try {
+                const response = await fetch(`${MESSAGE_SERVICE_URL}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: message,
+                        user: 'User' // In a real app, this would come from authentication
+                    })
+                });
+
+                if (response.ok) {
+                    messageInput.value = '';
+                } else {
+                    const errorText = await response.text();
+                    addSystemMessage(`Failed to send message: ${errorText}`);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                addSystemMessage('Failed to send message. Please try again.');
+            } finally {
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
             }
         }
 
@@ -260,7 +307,7 @@
         });
 
         // Connect on page load
-        connect();
+        connectSSE();
     </script>
 </body>
 </html>
