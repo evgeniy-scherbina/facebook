@@ -111,9 +111,23 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// Get the path to index.html (two levels up from services/message/)
-	indexPath := filepath.Join("..", "..", "index.html")
-	http.ServeFile(w, r, indexPath)
+	// Try multiple possible paths for index.html
+	// In development: two levels up from services/message/
+	// In Docker: in the same directory as the binary
+	possiblePaths := []string{
+		filepath.Join("..", "..", "index.html"), // Development path
+		"index.html",                             // Docker path
+		"/root/index.html",                       // Absolute Docker path
+	}
+	
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			http.ServeFile(w, r, path)
+			return
+		}
+	}
+	
+	http.Error(w, "index.html not found", http.StatusNotFound)
 }
 
 func main() {

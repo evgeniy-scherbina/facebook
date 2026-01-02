@@ -29,10 +29,31 @@ The application consists of two independent services:
 
 ## Prerequisites
 
+**For Docker Compose:**
+- Docker and Docker Compose installed
+- Internet connection (for downloading images)
+
+**For Local Development:**
 - Go 1.21 or later
 - Internet connection (for downloading dependencies)
 
 ## Setup
+
+### Option 1: Using Docker Compose (Recommended)
+
+1. Build and start both services:
+```bash
+docker-compose up --build
+```
+
+2. Access the UI at `http://localhost:8080`
+
+3. To stop the services:
+```bash
+docker-compose down
+```
+
+### Option 2: Running Locally
 
 1. Install dependencies:
 ```bash
@@ -116,6 +137,43 @@ PORT=8081 go run services/real-time-ntfn/main.go
   ```
 
 - `GET /health` - Health check endpoint
+
+## Docker
+
+The project includes Dockerfiles and docker-compose configuration:
+
+- **docker-compose.yml** - Orchestrates both services
+- **services/message/Dockerfile** - Message service container
+- **services/real-time-ntfn/Dockerfile** - Real-time notification service container
+
+### Docker Compose Commands
+
+```bash
+# Build and start services
+docker-compose up --build
+
+# Start services in detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Rebuild and restart
+docker-compose up --build --force-recreate
+```
+
+### Building Individual Docker Images
+
+```bash
+# Build message service
+docker build -f services/message/Dockerfile -t message-service .
+
+# Build real-time notification service
+docker build -f services/real-time-ntfn/Dockerfile -t real-time-ntfn-service .
+```
 
 ## Building
 
