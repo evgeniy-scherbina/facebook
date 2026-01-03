@@ -18,10 +18,11 @@ type Notification struct {
 }
 
 type Client struct {
-	id       string
-	notify   chan Notification
-	done     chan struct{}
-	mu       sync.Mutex
+	id         string
+	notify     chan Notification
+	done       chan struct{}
+	mu         sync.Mutex
+	closeOnce  sync.Once
 }
 
 type Hub struct {
@@ -54,10 +55,15 @@ func (h *Hub) run() {
 			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
-				close(client.notify)
-				close(client.done)
 			}
 			h.mu.Unlock()
+			
+			// Close channels safely - sync.Once ensures they're only closed once
+			client.closeOnce.Do(func() {
+				close(client.notify)
+				close(client.done)
+			})
+			
 			log.Printf("SSE client disconnected. Total clients: %d", len(h.clients))
 
 		case notification := <-h.broadcast:
@@ -149,11 +155,15 @@ func serveSSE(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		hub.unregister <- client
 	}()
 
-	// Handle client disconnect
+	// Handle client disconnect - signal via done channel
 	ctx := r.Context()
 	go func() {
 		<-ctx.Done()
-		close(client.done)
+		// Signal that context is done - close done channel safely
+		client.closeOnce.Do(func() {
+			close(client.notify)
+			close(client.done)
+		})
 	}()
 
 	client.serveSSE(w)
