@@ -162,9 +162,41 @@
         const sendButton = document.getElementById('sendButton');
         const statusDiv = document.getElementById('status');
 
-        // Service URLs - can be configured via environment or defaults
-        const MESSAGE_SERVICE_URL = window.MESSAGE_SERVICE_URL || 'http://localhost:8080';
-        const NOTIFICATION_SERVICE_URL = window.NOTIFICATION_SERVICE_URL || 'http://localhost:8081';
+        // Service URLs - auto-detect based on current origin
+        // When served from message-service, use relative URLs for same-origin requests
+        // When accessed via ingress, use relative URLs (ingress routes /events to notification service)
+        // When accessed via port-forward, use explicit localhost URLs
+        function getServiceUrls() {
+            const origin = window.location.origin;
+            const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+            
+            // Allow explicit override via window variables
+            if (window.MESSAGE_SERVICE_URL && window.NOTIFICATION_SERVICE_URL) {
+                return {
+                    message: window.MESSAGE_SERVICE_URL,
+                    notification: window.NOTIFICATION_SERVICE_URL
+                };
+            }
+            
+            // If on localhost with port 8080, assume port-forwarding setup
+            if (isLocalhost && origin.includes(':8080')) {
+                return {
+                    message: 'http://localhost:8080',
+                    notification: 'http://localhost:8081'
+                };
+            }
+            
+            // Otherwise use relative URLs (works with ingress routing)
+            // Ingress routes /events to real-time-ntfn-service
+            return {
+                message: origin,  // Same origin for /messages
+                notification: origin  // Same origin for /events (routed by ingress)
+            };
+        }
+        
+        const serviceUrls = getServiceUrls();
+        const MESSAGE_SERVICE_URL = serviceUrls.message;
+        const NOTIFICATION_SERVICE_URL = serviceUrls.notification;
 
         let eventSource = null;
         let reconnectAttempts = 0;
