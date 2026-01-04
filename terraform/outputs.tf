@@ -17,7 +17,7 @@ output "ssh_commands" {
   description = "SSH commands to connect to instances"
   value = [
     for i, instance in aws_instance.ubuntu_instances :
-    "ssh -i ~/.ssh/your-key.pem ubuntu@${instance.public_ip}"
+    "ssh -i ~/.ssh/k8s.pem ubuntu@${instance.public_ip}"
   ]
 }
 

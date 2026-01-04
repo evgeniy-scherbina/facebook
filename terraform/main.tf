@@ -76,6 +76,7 @@ resource "aws_instance" "ubuntu_instances" {
   count         = 3
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
+  key_name      = "k8s"  # Existing SSH key pair in AWS account
   
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
   

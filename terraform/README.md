@@ -82,8 +82,8 @@ After `terraform apply`, you'll see:
 
 Use the SSH commands from the output, or manually:
 ```bash
-ssh -i ~/.ssh/your-key.pem ubuntu@<public-ip>
+ssh -i ~/.ssh/k8s.pem ubuntu@<public-ip>
 ```
 
-**Note:** You'll need to specify your SSH key. If you don't have one, you can add a `key_name` parameter to the `aws_instance` resource.
+**Note:** The configuration uses the existing SSH key pair named "k8s" from your AWS account. Make sure you have the corresponding private key file (`~/.ssh/k8s.pem`) on your local machine.
 
