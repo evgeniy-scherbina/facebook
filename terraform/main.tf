@@ -29,11 +29,12 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# Security group for EC2 instances
-resource "aws_security_group" "ec2_sg" {
-  name        = "${var.project_name}-ec2-sg"
-  description = "Security group for EC2 instances"
+# Security group for Kubernetes control plane
+resource "aws_security_group" "k8s_control_plane_sg" {
+  name        = "k8s-control-plane-sg"
+  description = "Security group for Kubernetes control plane node"
 
+  # SSH access
   ingress {
     description = "SSH"
     from_port   = 22
@@ -42,22 +43,25 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # API Server access from workers
   ingress {
-    description = "HTTP"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "Kubernetes API Server from workers"
+    from_port       = 6443
+    to_port         = 6443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.k8s_workers_sg.id]
   }
 
+  # API Server access from my IP for kubectl
   ingress {
-    description = "HTTPS"
-    from_port   = 443
-    to_port     = 443
+    description = "Kubernetes API Server (kubectl) from my IP"
+    from_port   = 6443
+    to_port     = 6443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
+  # Allow all outbound traffic
   egress {
     description = "Allow all outbound traffic"
     from_port   = 0
@@ -67,21 +71,89 @@ resource "aws_security_group" "ec2_sg" {
   }
 
   tags = {
-    Name = "${var.project_name}-ec2-sg"
+    Name = "k8s-control-plane-sg"
   }
 }
 
-# Create 3 EC2 instances
-resource "aws_instance" "ubuntu_instances" {
-  count         = 3
+# Security group for Kubernetes worker nodes
+resource "aws_security_group" "k8s_workers_sg" {
+  name        = "k8s-workers-sg"
+  description = "Security group for Kubernetes worker nodes"
+
+  # SSH access
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Kubelet API access from control plane
+  ingress {
+    description     = "Kubelet API from control plane"
+    from_port       = 10250
+    to_port         = 10250
+    protocol        = "tcp"
+    security_groups = [aws_security_group.k8s_control_plane_sg.id]
+  }
+
+  # NodePort services from my IP
+  ingress {
+    description = "NodePort services from my IP"
+    from_port   = 30000
+    to_port      = 32767
+    protocol     = "tcp"
+    cidr_blocks  = ["${var.my_ip}/32"]
+  }
+
+  # Allow all outbound traffic
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "k8s-workers-sg"
+  }
+}
+
+# Create Kubernetes control plane instance
+resource "aws_instance" "k8s_control_plane" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t2.micro"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
   
-  vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  vpc_security_group_ids = [aws_security_group.k8s_control_plane_sg.id]
   
   tags = {
-    Name = "${var.project_name}-instance-${count.index + 1}"
+    Name = "${var.project_name}-control-plane"
+    Role = "control-plane"
+  }
+
+  # Optional: Add user data for initial setup
+  user_data = <<-EOF
+              #!/bin/bash
+              apt-get update
+              apt-get install -y curl wget git
+              EOF
+}
+
+# Create Kubernetes worker instances
+resource "aws_instance" "k8s_workers" {
+  count         = 2
+  ami           = data.aws_ami.ubuntu.id
+  instance_type  = "t2.micro"
+  key_name      = "k8s"  # Existing SSH key pair in AWS account
+  
+  vpc_security_group_ids = [aws_security_group.k8s_workers_sg.id]
+  
+  tags = {
+    Name = "${var.project_name}-worker-${count.index + 1}"
+    Role = "worker"
   }
 
   # Optional: Add user data for initial setup

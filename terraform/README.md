@@ -1,6 +1,8 @@
-# Terraform Configuration for EC2 Instances
+# Terraform Configuration for Kubernetes Cluster
 
-This Terraform configuration creates 3 EC2 t2.micro instances running Ubuntu 22.04.
+This Terraform configuration creates a Kubernetes cluster with:
+- 1 control plane node (t2.micro, Ubuntu 22.04)
+- 2 worker nodes (t2.micro, Ubuntu 22.04)
 
 ## Prerequisites
 
@@ -53,30 +55,35 @@ You can customize the configuration by creating a `terraform.tfvars` file:
 ```hcl
 aws_region   = "us-west-2"
 project_name = "my-project"
+my_ip        = "174.169.160.191/32"  # Your IP for kubectl and NodePort access
 ```
 
 Or set them via command line:
 ```bash
-terraform apply -var="aws_region=us-west-2"
+terraform apply -var="aws_region=us-west-2" -var="my_ip=174.169.160.191/32"
 ```
 
-### Security Group
+### Security Groups
 
-The default security group allows:
+**k8s-control-plane-sg:**
 - SSH (port 22) from anywhere
-- HTTP (port 80) from anywhere
-- HTTPS (port 443) from anywhere
+- Kubernetes API Server (port 6443) from workers SG
+- Kubernetes API Server (port 6443) from your IP (for kubectl)
 - All outbound traffic
 
-**Note:** For production, restrict SSH access to your IP address.
+**k8s-workers-sg:**
+- SSH (port 22) from anywhere
+- Kubelet API (port 10250) from control plane SG
+- NodePort services (ports 30000-32767) from your IP
+- All outbound traffic
 
 ## Outputs
 
 After `terraform apply`, you'll see:
-- Instance IDs
-- Public IPs
-- Public DNS names
-- SSH connection commands
+- Control plane instance ID, IP, and DNS
+- Worker instance IDs, IPs, and DNS
+- SSH connection commands for all nodes
+- kubectl configuration command
 
 ## Connecting to Instances
 
