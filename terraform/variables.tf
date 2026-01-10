@@ -11,8 +11,8 @@ variable "project_name" {
 }
 
 variable "my_ip" {
-  description = "Your IP address for kubectl and NodePort access (CIDR format, e.g., 174.169.160.191/32)"
+  description = "Your IP address for kubectl and NodePort access (just IP, e.g., 174.169.160.191)"
   type        = string
-  default     = "174.169.160.191/32"
+  default     = "174.169.160.191"
 }
 

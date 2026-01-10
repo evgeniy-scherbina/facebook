@@ -43,15 +43,6 @@ resource "aws_security_group" "k8s_control_plane_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # API Server access from workers
-  ingress {
-    description     = "Kubernetes API Server from workers"
-    from_port       = 6443
-    to_port         = 6443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.k8s_workers_sg.id]
-  }
-
   # API Server access from my IP for kubectl
   ingress {
     description = "Kubernetes API Server (kubectl) from my IP"
@@ -89,22 +80,13 @@ resource "aws_security_group" "k8s_workers_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Kubelet API access from control plane
-  ingress {
-    description     = "Kubelet API from control plane"
-    from_port       = 10250
-    to_port         = 10250
-    protocol        = "tcp"
-    security_groups = [aws_security_group.k8s_control_plane_sg.id]
-  }
-
   # NodePort services from my IP
   ingress {
     description = "NodePort services from my IP"
     from_port   = 30000
-    to_port      = 32767
-    protocol     = "tcp"
-    cidr_blocks  = ["${var.my_ip}/32"]
+    to_port     = 32767
+    protocol    = "tcp"
+    cidr_blocks = ["${var.my_ip}/32"]
   }
 
   # Allow all outbound traffic
@@ -119,6 +101,30 @@ resource "aws_security_group" "k8s_workers_sg" {
   tags = {
     Name = "k8s-workers-sg"
   }
+}
+
+# Security group rules for cross-references (to break circular dependency)
+
+# Allow API Server access from workers to control plane
+resource "aws_security_group_rule" "control_plane_api_from_workers" {
+  type                     = "ingress"
+  from_port                = 6443
+  to_port                  = 6443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.k8s_workers_sg.id
+  security_group_id        = aws_security_group.k8s_control_plane_sg.id
+  description              = "Kubernetes API Server from workers"
+}
+
+# Allow Kubelet API access from control plane to workers
+resource "aws_security_group_rule" "workers_kubelet_from_control_plane" {
+  type                     = "ingress"
+  from_port                = 10250
+  to_port                  = 10250
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.k8s_control_plane_sg.id
+  security_group_id        = aws_security_group.k8s_workers_sg.id
+  description              = "Kubelet API from control plane"
 }
 
 # Create Kubernetes control plane instance
