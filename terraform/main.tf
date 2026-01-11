@@ -140,11 +140,30 @@ resource "aws_instance" "k8s_control_plane" {
     Role = "control-plane"
   }
 
-  # Optional: Add user data for initial setup
+  # User data script to install Ansible and run playbook
   user_data = <<-EOF
               #!/bin/bash
+              set -e
+              
+              # Install Ansible
               apt-get update
-              apt-get install -y curl wget git
+              apt-get install -y python3 python3-pip python3-apt
+              pip3 install ansible
+              
+              # Create and run playbook
+              mkdir -p /opt/ansible
+              cat > /opt/ansible/playbook.yml << 'PLAYBOOK_EOF'
+              ---
+              - name: Configure node
+                hosts: localhost
+                become: yes
+                tasks:
+                  - name: Placeholder task
+                    debug:
+                      msg: "Placeholder playbook. Add your configuration tasks here."
+              PLAYBOOK_EOF
+              
+              ansible-playbook /opt/ansible/playbook.yml
               EOF
 }
 
@@ -162,11 +181,30 @@ resource "aws_instance" "k8s_workers" {
     Role = "worker"
   }
 
-  # Optional: Add user data for initial setup
+  # User data script to install Ansible and run playbook
   user_data = <<-EOF
               #!/bin/bash
+              set -e
+              
+              # Install Ansible
               apt-get update
-              apt-get install -y curl wget git
+              apt-get install -y python3 python3-pip python3-apt
+              pip3 install ansible
+              
+              # Create and run playbook
+              mkdir -p /opt/ansible
+              cat > /opt/ansible/playbook.yml << 'PLAYBOOK_EOF'
+              ---
+              - name: Configure node
+                hosts: localhost
+                become: yes
+                tasks:
+                  - name: Placeholder task
+                    debug:
+                      msg: "Placeholder playbook. Add your configuration tasks here."
+              PLAYBOOK_EOF
+              
+              ansible-playbook /opt/ansible/playbook.yml
               EOF
 }
 

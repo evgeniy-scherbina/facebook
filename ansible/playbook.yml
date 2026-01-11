@@ -1,0 +1,10 @@
+---
+- name: Configure node
+  hosts: localhost
+  become: yes
+
+  tasks:
+    - name: Placeholder task
+      debug:
+        msg: "Placeholder playbook. Add your configuration tasks here."
+
