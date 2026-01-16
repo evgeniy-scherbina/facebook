@@ -147,22 +147,18 @@ resource "aws_instance" "k8s_control_plane" {
               
               # Install Ansible
               apt-get update
-              apt-get install -y python3 python3-pip python3-apt
+              apt-get install -y python3 python3-pip python3-apt curl
               pip3 install ansible
               
-              # Create and run playbook
+              # Create ansible directory
               mkdir -p /opt/ansible
-              cat > /opt/ansible/playbook.yml << 'PLAYBOOK_EOF'
-              ---
-              - name: Configure node
-                hosts: localhost
-                become: yes
-                tasks:
-                  - name: Placeholder task
-                    debug:
-                      msg: "Placeholder playbook. Add your configuration tasks here."
-              PLAYBOOK_EOF
+              cd /opt/ansible
               
+              # Fetch playbook from repository
+              echo "Fetching playbook from GitHub..."
+              curl -o /opt/ansible/playbook.yml "https://raw.githubusercontent.com/evgeniy-scherbina/facebook/master/ansible/playbook.yml"
+              
+              # Run playbook
               ansible-playbook /opt/ansible/playbook.yml
               EOF
 }
@@ -188,22 +184,18 @@ resource "aws_instance" "k8s_workers" {
               
               # Install Ansible
               apt-get update
-              apt-get install -y python3 python3-pip python3-apt
+              apt-get install -y python3 python3-pip python3-apt curl
               pip3 install ansible
               
-              # Create and run playbook
+              # Create ansible directory
               mkdir -p /opt/ansible
-              cat > /opt/ansible/playbook.yml << 'PLAYBOOK_EOF'
-              ---
-              - name: Configure node
-                hosts: localhost
-                become: yes
-                tasks:
-                  - name: Placeholder task
-                    debug:
-                      msg: "Placeholder playbook. Add your configuration tasks here."
-              PLAYBOOK_EOF
+              cd /opt/ansible
               
+              # Fetch playbook from repository
+              echo "Fetching playbook from GitHub..."
+              curl -o /opt/ansible/playbook.yml "https://raw.githubusercontent.com/evgeniy-scherbina/facebook/master/ansible/playbook.yml"
+              
+              # Run playbook
               ansible-playbook /opt/ansible/playbook.yml
               EOF
 }
