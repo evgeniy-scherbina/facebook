@@ -1,5 +1,30 @@
 ---
-- name: Placeholder task for containerd role
-  debug:
-    msg: "Containerd role placeholder. Add containerd installation and configuration tasks here."
+- name: Set containerd version
+  set_fact:
+    containerd_version: "2.2.1"
+    containerd_arch: "amd64"
+
+- name: Create temporary directory for containerd download
+  tempfile:
+    state: directory
+    suffix: containerd
+  register: containerd_temp_dir
+
+- name: Download containerd
+  get_url:
+    url: "https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}-linux-{{ containerd_arch }}.tar.gz"
+    dest: "{{ containerd_temp_dir.path }}/containerd-{{ containerd_version }}-linux-{{ containerd_arch }}.tar.gz"
+    mode: '0644'
+
+- name: Extract containerd to /usr/local
+  unarchive:
+    src: "{{ containerd_temp_dir.path }}/containerd-{{ containerd_version }}-linux-{{ containerd_arch }}.tar.gz"
+    dest: /usr/local
+    remote_src: yes
+    creates: /usr/local/bin/containerd
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ containerd_temp_dir.path }}"
+    state: absent
 
