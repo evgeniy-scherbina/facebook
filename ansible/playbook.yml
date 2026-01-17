@@ -4,7 +4,17 @@
   become: yes
 
   tasks:
-    - name: Placeholder task
-      debug:
-        msg: "Placeholder playbook. Add your configuration tasks here."
+    - name: Create sysctl configuration file for Kubernetes
+      copy:
+        dest: /etc/sysctl.d/k8s.conf
+        content: |
+          # sysctl params required by setup, params persist across reboots
+          net.ipv4.ip_forward = 1
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Apply sysctl parameters without reboot
+      command: sysctl --system
+      changed_when: false
 
