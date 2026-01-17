@@ -30,11 +30,12 @@
     dest: /etc/apt/sources.list.d/kubernetes.list
     content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ k8s_version }}/deb/ /\n"
     mode: '0644'
+    force: yes
 
-- name: Update apt cache
+- name: Update apt cache after adding repository
   apt:
     update_cache: yes
-    cache_valid_time: 3600
+    cache_valid_time: 0
 
 - name: Install Kubernetes tools
   apt:
