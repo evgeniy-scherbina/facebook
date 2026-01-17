@@ -6,4 +6,5 @@
   roles:
     - host_configuration
     - containerd
+    - kubetools
 

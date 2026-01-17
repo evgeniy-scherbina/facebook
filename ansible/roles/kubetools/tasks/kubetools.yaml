@@ -1,0 +1,61 @@
+---
+- name: Set Kubernetes version
+  set_fact:
+    k8s_version: "v1.35"
+
+- name: Install prerequisites for Kubernetes repository
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg
+    state: present
+    update_cache: yes
+
+- name: Create apt keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download and add Kubernetes GPG key
+  shell: |
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ k8s_version }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: Add Kubernetes repository
+  copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ k8s_version }}/deb/ /\n"
+    mode: '0644'
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install Kubernetes tools
+  apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+
+- name: Hold Kubernetes packages to prevent automatic updates
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+- name: Enable and start kubelet service
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+

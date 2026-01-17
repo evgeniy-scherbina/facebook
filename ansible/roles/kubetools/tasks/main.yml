@@ -1,0 +1,4 @@
+---
+- name: Import kubetools installation tasks
+  import_tasks: kubetools.yaml
+
