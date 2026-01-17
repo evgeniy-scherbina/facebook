@@ -1,0 +1,31 @@
+---
+- name: Set runc version and architecture
+  set_fact:
+    runc_version: "1.1.12"
+    runc_arch: "amd64"
+
+- name: Create temporary directory for runc download
+  tempfile:
+    state: directory
+    suffix: runc
+  register: runc_temp_dir
+
+- name: Download runc binary
+  get_url:
+    url: "https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.{{ runc_arch }}"
+    dest: "{{ runc_temp_dir.path }}/runc.{{ runc_arch }}"
+    mode: '0644'
+
+- name: Install runc binary
+  copy:
+    src: "{{ runc_temp_dir.path }}/runc.{{ runc_arch }}"
+    dest: /usr/local/sbin/runc
+    mode: '0755'
+    remote_src: yes
+    creates: /usr/local/sbin/runc
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ runc_temp_dir.path }}"
+    state: absent
+
