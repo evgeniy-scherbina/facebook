@@ -8,3 +8,6 @@
 - name: Import CNI plugins installation tasks
   import_tasks: cni-plugins.yaml
 
+- name: Import customize containerd configuration tasks
+  import_tasks: customize-containerd.yaml
+
