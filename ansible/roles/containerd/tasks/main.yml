@@ -1,0 +1,5 @@
+---
+- name: Placeholder task for containerd role
+  debug:
+    msg: "Containerd role placeholder. Add containerd installation and configuration tasks here."
+

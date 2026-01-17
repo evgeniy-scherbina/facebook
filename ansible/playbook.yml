@@ -5,4 +5,5 @@
 
   roles:
     - host_configuration
+    - containerd
 
