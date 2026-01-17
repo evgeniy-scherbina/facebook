@@ -11,3 +11,17 @@
     creates: /etc/containerd/config.toml
   changed_when: false
 
+- name: Set SystemdCgroup to true in containerd config
+  replace:
+    path: /etc/containerd/config.toml
+    regexp: '^\s*SystemdCgroup\s*=\s*false'
+    replace: '  SystemdCgroup = true'
+    backup: yes
+  register: config_changed
+
+- name: Restart containerd service
+  systemd:
+    name: containerd
+    state: restarted
+  when: config_changed.changed
+
