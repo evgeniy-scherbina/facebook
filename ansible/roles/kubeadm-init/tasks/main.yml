@@ -19,6 +19,10 @@
   register: user_home_result
   changed_when: false
 
+- name: Display user home directory result
+  debug:
+    var: user_home_result
+
 - name: Create .kube directory in user home
   file:
     path: "{{ user_home_result.stdout }}/.kube"
