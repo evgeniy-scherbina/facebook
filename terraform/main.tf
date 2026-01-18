@@ -145,21 +145,16 @@ resource "aws_instance" "k8s_control_plane" {
               #!/bin/bash
               set -e
               
-              # Install Ansible
+              # Install Ansible and git
               apt-get update
-              apt-get install -y python3 python3-pip python3-apt curl
+              apt-get install -y python3 python3-pip python3-apt curl git
               pip3 install ansible
               
-              # Create ansible directory
-              mkdir -p /opt/ansible
-              cd /opt/ansible
+              # Clone repository as ubuntu user
+              su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
               
-              # Fetch playbook from repository
-              echo "Fetching playbook from GitHub..."
-              curl -o /opt/ansible/playbook.yml "https://raw.githubusercontent.com/evgeniy-scherbina/facebook/master/ansible/playbook.yml"
-              
-              # Run playbook with control_plane=true for control plane node
-              ansible-playbook /opt/ansible/playbook.yml -e "control_plane=true"
+              # Run playbook as ubuntu user with control_plane=true for control plane node
+              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'control_plane=true'"
               EOF
 }
 
@@ -182,21 +177,16 @@ resource "aws_instance" "k8s_workers" {
               #!/bin/bash
               set -e
               
-              # Install Ansible
+              # Install Ansible and git
               apt-get update
-              apt-get install -y python3 python3-pip python3-apt curl
+              apt-get install -y python3 python3-pip python3-apt curl git
               pip3 install ansible
               
-              # Create ansible directory
-              mkdir -p /opt/ansible
-              cd /opt/ansible
+              # Clone repository as ubuntu user
+              su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
               
-              # Fetch playbook from repository
-              echo "Fetching playbook from GitHub..."
-              curl -o /opt/ansible/playbook.yml "https://raw.githubusercontent.com/evgeniy-scherbina/facebook/master/ansible/playbook.yml"
-              
-              # Run playbook (worker node - control_plane defaults to false)
-              ansible-playbook /opt/ansible/playbook.yml
+              # Run playbook as ubuntu user (worker node - control_plane defaults to false)
+              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml"
               EOF
 }
 
