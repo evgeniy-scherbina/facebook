@@ -154,7 +154,11 @@ resource "aws_instance" "k8s_control_plane" {
               su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
               
               # Run playbook as ubuntu user with control_plane=true for control plane node
-              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'control_plane=true'"
+              # Redirect output to log file for visibility
+              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'control_plane=true' > /home/ubuntu/ansible-playbook.log 2>&1"
+              
+              # Also save kubeadm join command if it exists
+              su - ubuntu -c "grep 'kubeadm join' /home/ubuntu/ansible-playbook.log > /home/ubuntu/kubeadm-join-command.txt 2>/dev/null || true"
               EOF
 }
 
@@ -186,7 +190,8 @@ resource "aws_instance" "k8s_workers" {
               su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
               
               # Run playbook as ubuntu user (worker node - control_plane defaults to false)
-              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml"
+              # Redirect output to log file for visibility
+              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml > /home/ubuntu/ansible-playbook.log 2>&1"
               EOF
 }
 
