@@ -158,8 +158,8 @@ resource "aws_instance" "k8s_control_plane" {
               echo "Fetching playbook from GitHub..."
               curl -o /opt/ansible/playbook.yml "https://raw.githubusercontent.com/evgeniy-scherbina/facebook/master/ansible/playbook.yml"
               
-              # Run playbook
-              ansible-playbook /opt/ansible/playbook.yml
+              # Run playbook with control_plane=true for control plane node
+              ansible-playbook /opt/ansible/playbook.yml -e "control_plane=true"
               EOF
 }
 
@@ -195,7 +195,7 @@ resource "aws_instance" "k8s_workers" {
               echo "Fetching playbook from GitHub..."
               curl -o /opt/ansible/playbook.yml "https://raw.githubusercontent.com/evgeniy-scherbina/facebook/master/ansible/playbook.yml"
               
-              # Run playbook
+              # Run playbook (worker node - control_plane defaults to false)
               ansible-playbook /opt/ansible/playbook.yml
               EOF
 }

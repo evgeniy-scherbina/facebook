@@ -2,9 +2,13 @@
 - name: Configure node
   hosts: localhost
   become: yes
+  vars:
+    is_control_plane: "{{ control_plane | default(false) }}"
 
   roles:
     - host_configuration
     - containerd
     - kubetools
+    - role: kubeadm-init
+      when: is_control_plane | bool
 

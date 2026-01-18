@@ -1,0 +1,5 @@
+---
+- name: Placeholder task for kubeadm-init role
+  debug:
+    msg: "Kubeadm-init role placeholder. Add kubeadm init tasks here."
+
