@@ -130,7 +130,7 @@ resource "aws_security_group_rule" "workers_kubelet_from_control_plane" {
 # Create Kubernetes control plane instance
 resource "aws_instance" "k8s_control_plane" {
   ami           = data.aws_ami.ubuntu.id
-  instance_type = "t2.micro"
+  instance_type = "t3.medium"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
   
   vpc_security_group_ids = [aws_security_group.k8s_control_plane_sg.id]
@@ -160,9 +160,9 @@ resource "aws_instance" "k8s_control_plane" {
 
 # Create Kubernetes worker instances
 resource "aws_instance" "k8s_workers" {
-  count         = 2
+  count         = 0 # TODO: set to 2
   ami           = data.aws_ami.ubuntu.id
-  instance_type  = "t2.micro"
+  instance_type  = "t3.small"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
   
   vpc_security_group_ids = [aws_security_group.k8s_workers_sg.id]

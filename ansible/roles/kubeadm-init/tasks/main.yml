@@ -1,6 +1,6 @@
 ---
 - name: Initialize Kubernetes cluster with kubeadm
-  command: kubeadm init --ignore-preflight-errors="NumCPU,Mem"
+  command: kubeadm init --ignore-preflight-errors="NumCPU,Mem" # TODO: remove NumCPU,Mem
   become: yes
   args:
     creates: /etc/kubernetes/admin.conf
