@@ -1,7 +1,6 @@
 ---
 - name: Install Calico CNI plugin
   command: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.2/manifests/calico.yaml
-  become: yes
   register: calico_install_result
 
 - name: Display Calico installation output
