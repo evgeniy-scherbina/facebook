@@ -1,5 +1,12 @@
 ---
-- name: Placeholder task for kubeadm-init role
+- name: Initialize Kubernetes cluster with kubeadm
+  command: kubeadm init --ignore-preflight-errors="NumCPU,Mem"
+  become: yes
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: kubeadm_init_result
+
+- name: Display kubeadm init output
   debug:
-    msg: "Kubeadm-init role placeholder. Add kubeadm init tasks here."
+    var: kubeadm_init_result.stdout_lines
 
