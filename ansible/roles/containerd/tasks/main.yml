@@ -1,13 +1,17 @@
 ---
 - name: Import containerd installation and configuration tasks
   import_tasks: containerd.yaml
+  become: yes
 
 - name: Import runc installation tasks
   import_tasks: runc.yaml
+  become: yes
 
 - name: Import CNI plugins installation tasks
   import_tasks: cni-plugins.yaml
+  become: yes
 
 - name: Import customize containerd configuration tasks
   import_tasks: customize-containerd.yaml
+  become: yes
 

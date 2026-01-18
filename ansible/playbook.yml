@@ -1,7 +1,6 @@
 ---
 - name: Configure node
   hosts: localhost
-  become: yes
   vars:
     is_control_plane: "{{ control_plane | default(false) }}"
 
