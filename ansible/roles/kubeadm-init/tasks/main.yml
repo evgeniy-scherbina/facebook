@@ -10,3 +10,31 @@
   debug:
     var: kubeadm_init_result.stdout_lines
 
+- name: Set default user for kubectl config
+  set_fact:
+    kube_user: "ubuntu"
+
+- name: Get user home directory
+  shell: echo ~{{ kube_user }}
+  register: user_home_result
+  changed_when: false
+
+- name: Create .kube directory in user home
+  file:
+    path: "{{ user_home_result.stdout }}/.kube"
+    state: directory
+    mode: '0755'
+    owner: "{{ kube_user }}"
+    group: "{{ kube_user }}"
+  become: yes
+
+- name: Copy Kubernetes admin config to user .kube directory
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ user_home_result.stdout }}/.kube/config"
+    remote_src: yes
+    owner: "{{ kube_user }}"
+    group: "{{ kube_user }}"
+    mode: '0600'
+  become: yes
+
