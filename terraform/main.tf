@@ -34,33 +34,6 @@ resource "aws_security_group" "k8s_control_plane_sg" {
   name        = "k8s-control-plane-sg"
   description = "Security group for Kubernetes control plane node"
 
-  # SSH access
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # API Server access from my IP for kubectl
-  ingress {
-    description = "Kubernetes API Server (kubectl) from my IP"
-    from_port   = 6443
-    to_port     = 6443
-    protocol    = "tcp"
-    cidr_blocks = ["${var.my_ip}/32"]
-  }
-
-  # Allow all outbound traffic
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = {
     Name = "k8s-control-plane-sg"
   }
@@ -71,41 +44,34 @@ resource "aws_security_group" "k8s_workers_sg" {
   name        = "k8s-workers-sg"
   description = "Security group for Kubernetes worker nodes"
 
-  # SSH access
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # NodePort services from my IP
-  ingress {
-    description = "NodePort services from my IP"
-    from_port   = 30000
-    to_port     = 32767
-    protocol    = "tcp"
-    cidr_blocks = ["${var.my_ip}/32"]
-  }
-
-  # Allow all outbound traffic
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = {
     Name = "k8s-workers-sg"
   }
 }
 
-# Security group rules for cross-references (to break circular dependency)
+# Security group rules - all defined as separate resources
 
-# Allow API Server access from workers to control plane
+# Control Plane Rules
+resource "aws_security_group_rule" "control_plane_ssh" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.k8s_control_plane_sg.id
+  description       = "SSH access"
+}
+
+resource "aws_security_group_rule" "control_plane_api_from_my_ip" {
+  type              = "ingress"
+  from_port         = 6443
+  to_port           = 6443
+  protocol          = "tcp"
+  cidr_blocks       = ["${var.my_ip}/32"]
+  security_group_id = aws_security_group.k8s_control_plane_sg.id
+  description       = "Kubernetes API Server (kubectl) from my IP"
+}
+
 resource "aws_security_group_rule" "control_plane_api_from_workers" {
   type                     = "ingress"
   from_port                = 6443
@@ -116,7 +82,37 @@ resource "aws_security_group_rule" "control_plane_api_from_workers" {
   description              = "Kubernetes API Server from workers"
 }
 
-# Allow Kubelet API access from control plane to workers
+resource "aws_security_group_rule" "control_plane_egress_all" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.k8s_control_plane_sg.id
+  description       = "Allow all outbound traffic"
+}
+
+# Worker Rules
+resource "aws_security_group_rule" "workers_ssh" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.k8s_workers_sg.id
+  description       = "SSH access"
+}
+
+resource "aws_security_group_rule" "workers_nodeport_from_my_ip" {
+  type              = "ingress"
+  from_port         = 30000
+  to_port           = 32767
+  protocol          = "tcp"
+  cidr_blocks       = ["${var.my_ip}/32"]
+  security_group_id = aws_security_group.k8s_workers_sg.id
+  description       = "NodePort services from my IP"
+}
+
 resource "aws_security_group_rule" "workers_kubelet_from_control_plane" {
   type                     = "ingress"
   from_port                = 10250
@@ -125,6 +121,16 @@ resource "aws_security_group_rule" "workers_kubelet_from_control_plane" {
   source_security_group_id = aws_security_group.k8s_control_plane_sg.id
   security_group_id        = aws_security_group.k8s_workers_sg.id
   description              = "Kubelet API from control plane"
+}
+
+resource "aws_security_group_rule" "workers_egress_all" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.k8s_workers_sg.id
+  description       = "Allow all outbound traffic"
 }
 
 # Create Kubernetes control plane instance
@@ -164,7 +170,7 @@ resource "aws_instance" "k8s_control_plane" {
 
 # Create Kubernetes worker instances
 resource "aws_instance" "k8s_workers" {
-  count         = 0 # TODO: set to 2
+  count         = 1 # TODO: set to 2
   ami           = data.aws_ami.ubuntu.id
   instance_type  = "t3.small"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
