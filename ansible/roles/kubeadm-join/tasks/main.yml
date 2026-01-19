@@ -1,0 +1,99 @@
+---
+- name: Get control plane private IP (from metadata or environment)
+  shell: |
+    # Try to get from environment variable first
+    if [ -n "$CONTROL_PLANE_IP" ]; then
+      echo "$CONTROL_PLANE_IP"
+    else
+      # Try to discover control plane IP (this is a simple approach - you may want to use tags/API)
+      # For now, we'll use a default or you can pass it via environment
+      echo "172.31.28.246"
+    fi
+  register: control_plane_ip_result
+  changed_when: false
+
+- name: Set control plane IP
+  set_fact:
+    control_plane_ip: "{{ lookup('env', 'CONTROL_PLANE_IP') | default(control_plane_ip_result.stdout) }}"
+
+- name: Set kube user
+  set_fact:
+    kube_user: "ubuntu"
+
+- name: Get user home directory
+  shell: echo ~{{ kube_user }}
+  register: user_home_result
+  changed_when: false
+
+- name: Create .kube directory
+  file:
+    path: "{{ user_home_result.stdout }}/.kube"
+    state: directory
+    mode: '0755'
+    owner: "{{ kube_user }}"
+    group: "{{ kube_user }}"
+  become: yes
+
+- name: Wait for control plane HTTP server to be ready
+  wait_for:
+    host: "{{ control_plane_ip }}"
+    port: 8080
+    delay: 30
+    timeout: 600
+  delegate_to: localhost
+  become: no
+
+- name: Fetch kubeconfig from control plane HTTP server
+  get_url:
+    url: "http://{{ control_plane_ip }}:8080/kubeconfig"
+    dest: /tmp/kubeconfig
+    mode: '0600'
+  retries: 5
+  delay: 10
+  register: fetch_kubeconfig_result
+
+- name: Copy kubeconfig to worker node
+  copy:
+    src: /tmp/kubeconfig
+    dest: "{{ user_home_result.stdout }}/.kube/config"
+    owner: "{{ kube_user }}"
+    group: "{{ kube_user }}"
+    mode: '0600'
+  when: fetch_kubeconfig_result is succeeded
+  become: yes
+
+- name: Fetch kubeadm join command from control plane HTTP server
+  get_url:
+    url: "http://{{ control_plane_ip }}:8080/kubeadm-join-command.txt"
+    dest: /tmp/kubeadm-join-command.txt
+    mode: '0644'
+  retries: 5
+  delay: 10
+  register: fetch_join_cmd_result
+
+- name: Read kubeadm join command
+  slurp:
+    src: /tmp/kubeadm-join-command.txt
+  register: kubeadm_join_file
+  when: fetch_join_cmd_result is succeeded
+  ignore_errors: yes
+
+- name: Set kubeadm join command from file
+  set_fact:
+    kubeadm_join_cmd: "{{ kubeadm_join_file.content | b64decode | trim }}"
+  when: 
+    - kubeadm_join_file.content is defined
+    - kubeadm_join_file.content | length > 0
+
+- name: Run kubeadm join command
+  command: "{{ kubeadm_join_cmd }}"
+  become: yes
+  when: kubeadm_join_cmd is defined
+  register: kubeadm_join_result
+  ignore_errors: yes
+
+- name: Display join result
+  debug:
+    var: kubeadm_join_result.stdout_lines
+  when: kubeadm_join_result is defined
+
