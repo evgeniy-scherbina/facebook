@@ -10,6 +10,8 @@
     - kubetools
     - role: kubeadm-init
       when: is_control_plane | bool
+    - role: prepare-join
+      when: is_control_plane | bool
     - role: install-calico
       when: is_control_plane | bool
     - role: kubeadm-join
