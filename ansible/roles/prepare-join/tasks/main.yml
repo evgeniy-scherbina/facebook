@@ -1,0 +1,65 @@
+---
+- name: Set kube user
+  set_fact:
+    kube_user: "ubuntu"
+
+- name: Get user home directory
+  shell: echo ~{{ kube_user }}
+  register: user_home_result
+  changed_when: false
+
+- name: Extract kubeadm join command from kubeadm init output
+  shell: |
+    kubeadm token create --print-join-command
+  register: kubeadm_join_command
+  changed_when: false
+  become: yes
+  ignore_errors: yes
+
+- name: Save kubeadm join command to file
+  copy:
+    dest: /home/ubuntu/kubeadm-join-command.txt
+    content: "{{ kubeadm_join_command.stdout }}\n"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  when: kubeadm_join_command.stdout != ""
+
+- name: Create directory for serving files
+  file:
+    path: /home/ubuntu/k8s-files
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+  become: yes
+
+- name: Copy kubeconfig to shared directory
+  copy:
+    src: "{{ user_home_result.stdout }}/.kube/config"
+    dest: /home/ubuntu/k8s-files/kubeconfig
+    remote_src: yes
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  become: yes
+
+- name: Copy join command to shared directory
+  copy:
+    src: /home/ubuntu/kubeadm-join-command.txt
+    dest: /home/ubuntu/k8s-files/kubeadm-join-command.txt
+    remote_src: yes
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  become: yes
+
+- name: Start simple HTTP server to serve files
+  shell: |
+    cd /home/ubuntu/k8s-files
+    nohup python3 -m http.server 8080 > /dev/null 2>&1 &
+  args:
+    creates: /tmp/k8s-http-server.pid
+  become_user: ubuntu
+  ignore_errors: yes
+

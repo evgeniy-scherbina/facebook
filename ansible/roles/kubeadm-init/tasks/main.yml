@@ -41,4 +41,3 @@
     group: "{{ kube_user }}"
     mode: '0600'
   become: yes
-

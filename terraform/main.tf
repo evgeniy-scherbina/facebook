@@ -133,6 +133,17 @@ resource "aws_security_group_rule" "workers_egress_all" {
   description       = "Allow all outbound traffic"
 }
 
+# Allow HTTP server access from workers to control plane (for fetching kubeconfig and join command)
+resource "aws_security_group_rule" "control_plane_http_from_workers" {
+  type                     = "ingress"
+  from_port                = 8080
+  to_port                  = 8080
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.k8s_workers_sg.id
+  security_group_id        = aws_security_group.k8s_control_plane_sg.id
+  description              = "HTTP server for kubeconfig and join command from workers"
+}
+
 # Create Kubernetes control plane instance
 resource "aws_instance" "k8s_control_plane" {
   ami           = data.aws_ami.ubuntu.id
@@ -162,9 +173,6 @@ resource "aws_instance" "k8s_control_plane" {
               # Run playbook as ubuntu user with control_plane=true for control plane node
               # Redirect output to log file for visibility
               su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'control_plane=true' > /home/ubuntu/ansible-playbook.log 2>&1"
-              
-              # Also save kubeadm join command if it exists
-              su - ubuntu -c "grep 'kubeadm join' /home/ubuntu/ansible-playbook.log > /home/ubuntu/kubeadm-join-command.txt 2>/dev/null || true"
               EOF
 }
 
