@@ -164,7 +164,7 @@ resource "aws_instance" "k8s_control_plane" {
 
 # Create Kubernetes worker instances
 resource "aws_instance" "k8s_workers" {
-  count         = 0 # TODO: set to 2
+  count         = 1 # TODO: set to 2
   ami           = data.aws_ami.ubuntu.id
   instance_type  = "t3.small"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
