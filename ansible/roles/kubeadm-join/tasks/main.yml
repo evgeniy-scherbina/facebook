@@ -1,7 +1,14 @@
 ---
-- name: Set control plane IP (hardcoded)
+- name: Get control plane IP from AWS Systems Manager Parameter Store
+  shell: |
+    aws ssm get-parameter --name "/facebook-chat/control-plane/private-ip" --query 'Parameter.Value' --output text
+  register: control_plane_ip_result
+  changed_when: false
+  failed_when: false
+
+- name: Set control plane IP
   set_fact:
-    control_plane_ip: "172.31.28.246"
+    control_plane_ip: "{{ control_plane_ip_result.stdout }}"
 
 - name: Set kube user
   set_fact:
