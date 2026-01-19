@@ -178,7 +178,7 @@ resource "aws_instance" "k8s_control_plane" {
 
 # Create Kubernetes worker instances
 resource "aws_instance" "k8s_workers" {
-  count         = 1 # TODO: set to 2
+  count         = 2 # TODO: set to 2
   ami           = data.aws_ami.ubuntu.id
   instance_type  = "t3.small"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
@@ -203,9 +203,9 @@ resource "aws_instance" "k8s_workers" {
               # Clone repository as ubuntu user
               su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
               
-              # Run playbook as ubuntu user (worker node - control_plane defaults to false)
+              # Run playbook as ubuntu user (worker node)
               # Redirect output to log file for visibility
-              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml > /home/ubuntu/ansible-playbook.log 2>&1"
+              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'is_worker_node=true' > /home/ubuntu/ansible-playbook.log 2>&1"
               EOF
 }
 
