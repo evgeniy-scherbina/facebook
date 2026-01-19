@@ -1,16 +1,6 @@
 ---
-- name: Get control plane private IP address
-  shell: |
-    curl -s http://169.254.169.254/latest/meta-data/local-ipv4
-  register: control_plane_ip
-  changed_when: false
-
-- name: Display control plane IP
-  debug:
-    msg: "Control plane private IP: {{ control_plane_ip.stdout }}"
-
 - name: Initialize Kubernetes cluster with kubeadm
-  command: kubeadm init --apiserver-advertise-address={{ control_plane_ip.stdout }} --ignore-preflight-errors="NumCPU,Mem" # TODO: remove NumCPU,Mem
+  command: kubeadm init --ignore-preflight-errors="NumCPU,Mem" # TODO: remove NumCPU,Mem
   become: yes
   args:
     creates: /etc/kubernetes/admin.conf
