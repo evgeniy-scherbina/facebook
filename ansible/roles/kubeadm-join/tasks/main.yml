@@ -1,20 +1,7 @@
 ---
-- name: Get control plane private IP (from metadata or environment)
-  shell: |
-    # Try to get from environment variable first
-    if [ -n "$CONTROL_PLANE_IP" ]; then
-      echo "$CONTROL_PLANE_IP"
-    else
-      # Try to discover control plane IP (this is a simple approach - you may want to use tags/API)
-      # For now, we'll use a default or you can pass it via environment
-      echo "172.31.28.246"
-    fi
-  register: control_plane_ip_result
-  changed_when: false
-
-- name: Set control plane IP
+- name: Set control plane IP (hardcoded)
   set_fact:
-    control_plane_ip: "{{ lookup('env', 'CONTROL_PLANE_IP') | default(control_plane_ip_result.stdout) }}"
+    control_plane_ip: "172.31.28.246"
 
 - name: Set kube user
   set_fact:

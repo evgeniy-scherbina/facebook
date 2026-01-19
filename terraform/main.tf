@@ -173,9 +173,6 @@ resource "aws_instance" "k8s_control_plane" {
               # Run playbook as ubuntu user with control_plane=true for control plane node
               # Redirect output to log file for visibility
               su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'control_plane=true' > /home/ubuntu/ansible-playbook.log 2>&1"
-              
-              # Also save kubeadm join command if it exists
-              su - ubuntu -c "grep 'kubeadm join' /home/ubuntu/ansible-playbook.log > /home/ubuntu/kubeadm-join-command.txt 2>/dev/null || true"
               EOF
 }
 
@@ -198,10 +195,6 @@ resource "aws_instance" "k8s_workers" {
               #!/bin/bash
               set -e
               
-              # Get control plane private IP from Terraform
-              CONTROL_PLANE_IP=${aws_instance.k8s_control_plane.private_ip}
-              export CONTROL_PLANE_IP
-              
               # Install Ansible and git
               apt-get update
               apt-get install -y python3 python3-pip python3-apt curl git
@@ -211,9 +204,8 @@ resource "aws_instance" "k8s_workers" {
               su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
               
               # Run playbook as ubuntu user (worker node - control_plane defaults to false)
-              # Pass control plane IP as environment variable
               # Redirect output to log file for visibility
-              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && CONTROL_PLANE_IP=$CONTROL_PLANE_IP ansible-playbook playbook.yml > /home/ubuntu/ansible-playbook.log 2>&1"
+              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml > /home/ubuntu/ansible-playbook.log 2>&1"
               EOF
 }
 
