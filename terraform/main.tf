@@ -144,6 +144,102 @@ resource "aws_security_group_rule" "control_plane_http_from_workers" {
   description              = "HTTP server for kubeconfig and join command from workers"
 }
 
+# AWS Systems Manager Parameter Store for control plane IP
+resource "aws_ssm_parameter" "control_plane_ip" {
+  name  = "/${var.project_name}/control-plane/private-ip"
+  type  = "String"
+  value = "pending" # Will be updated by control plane after initialization
+
+  tags = {
+    Name = "${var.project_name}-control-plane-ip"
+  }
+}
+
+# IAM role for control plane to write to Parameter Store
+resource "aws_iam_role" "control_plane_ssm" {
+  name = "${var.project_name}-control-plane-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "control_plane_ssm" {
+  name = "${var.project_name}-control-plane-ssm-policy"
+  role = aws_iam_role.control_plane_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:PutParameter",
+          "ssm:GetParameter",
+          "ssm:UpdateParameter"
+        ]
+        Resource = aws_ssm_parameter.control_plane_ip.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "control_plane_ssm" {
+  name = "${var.project_name}-control-plane-ssm-profile"
+  role = aws_iam_role.control_plane_ssm.name
+}
+
+# IAM role for workers to read from Parameter Store
+resource "aws_iam_role" "worker_ssm" {
+  name = "${var.project_name}-worker-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "worker_ssm" {
+  name = "${var.project_name}-worker-ssm-policy"
+  role = aws_iam_role.worker_ssm.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters"
+        ]
+        Resource = aws_ssm_parameter.control_plane_ip.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "worker_ssm" {
+  name = "${var.project_name}-worker-ssm-profile"
+  role = aws_iam_role.worker_ssm.name
+}
+
 # Create Kubernetes control plane instance
 resource "aws_instance" "k8s_control_plane" {
   ami           = data.aws_ami.ubuntu.id
@@ -151,6 +247,7 @@ resource "aws_instance" "k8s_control_plane" {
   key_name      = "k8s"  # Existing SSH key pair in AWS account
   
   vpc_security_group_ids = [aws_security_group.k8s_control_plane_sg.id]
+  iam_instance_profile    = aws_iam_instance_profile.control_plane_ssm.name
   
   tags = {
     Name = "${var.project_name}-control-plane"
@@ -162,13 +259,17 @@ resource "aws_instance" "k8s_control_plane" {
               #!/bin/bash
               set -e
               
-              # Install Ansible and git
+              # Install Ansible, git, and AWS CLI
               apt-get update
-              apt-get install -y python3 python3-pip python3-apt curl git
+              apt-get install -y python3 python3-pip python3-apt curl git awscli
               pip3 install ansible
               
               # Clone repository as ubuntu user
               su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
+              
+              # Get control plane private IP and store in Parameter Store
+              CONTROL_PLANE_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+              aws ssm put-parameter --name "/${var.project_name}/control-plane/private-ip" --value "$CONTROL_PLANE_IP" --type "String" --overwrite --region ${var.aws_region} || true
               
               # Run playbook as ubuntu user with control_plane=true for control plane node
               # Redirect output to log file for visibility
@@ -184,6 +285,7 @@ resource "aws_instance" "k8s_workers" {
   key_name      = "k8s"  # Existing SSH key pair in AWS account
   
   vpc_security_group_ids = [aws_security_group.k8s_workers_sg.id]
+  iam_instance_profile   = aws_iam_instance_profile.worker_ssm.name
   
   tags = {
     Name = "${var.project_name}-worker-${count.index + 1}"
@@ -195,13 +297,23 @@ resource "aws_instance" "k8s_workers" {
               #!/bin/bash
               set -e
               
-              # Install Ansible and git
+              # Install Ansible, git, and AWS CLI
               apt-get update
-              apt-get install -y python3 python3-pip python3-apt curl git
+              apt-get install -y python3 python3-pip python3-apt curl git awscli
               pip3 install ansible
               
               # Clone repository as ubuntu user
               su - ubuntu -c "git clone https://github.com/evgeniy-scherbina/facebook.git /home/ubuntu/facebook"
+              
+              # Wait for control plane IP to be available in Parameter Store (with retries)
+              for i in {1..30}; do
+                CONTROL_PLANE_IP=$(aws ssm get-parameter --name "/${var.project_name}/control-plane/private-ip" --region ${var.aws_region} --query 'Parameter.Value' --output text 2>/dev/null || echo "")
+                if [ "$CONTROL_PLANE_IP" != "" ] && [ "$CONTROL_PLANE_IP" != "pending" ]; then
+                  break
+                fi
+                echo "Waiting for control plane IP... ($i/30)"
+                sleep 10
+              done
               
               # Run playbook as ubuntu user (worker node)
               # Redirect output to log file for visibility
