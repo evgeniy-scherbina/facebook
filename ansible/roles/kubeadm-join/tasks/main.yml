@@ -1,10 +1,24 @@
 ---
+- name: Get AWS region from instance metadata
+  shell: |
+    curl -s http://169.254.169.254/latest/meta-data/placement/region
+  register: aws_region_result
+  changed_when: false
+
+- name: Set AWS region
+  set_fact:
+    aws_region: "{{ aws_region_result.stdout }}"
+
 - name: Get control plane IP from AWS Systems Manager Parameter Store
   shell: |
-    aws ssm get-parameter --name "/facebook-chat/control-plane/private-ip" --query 'Parameter.Value' --output text
+    aws ssm get-parameter --name "/facebook-chat/control-plane/private-ip" --region {{ aws_region }} --query 'Parameter.Value' --output text
   register: control_plane_ip_result
   changed_when: false
   failed_when: false
+
+- name: Display control plane IP result
+  debug:
+    var: control_plane_ip_result
 
 - name: Set control plane IP
   set_fact:
