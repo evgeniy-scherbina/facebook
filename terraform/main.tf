@@ -317,7 +317,7 @@ resource "aws_instance" "k8s_workers" {
               
               # Run playbook as ubuntu user (worker node)
               # Redirect output to log file for visibility
-              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'is_worker_node=true' > /home/ubuntu/ansible-playbook.log 2>&1"
+              su - ubuntu -c "cd /home/ubuntu/facebook/ansible && ansible-playbook playbook.yml -e 'worker_node=true' > /home/ubuntu/ansible-playbook.log 2>&1"
               EOF
 }
 
