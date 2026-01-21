@@ -3,7 +3,7 @@
   hosts: localhost
   vars:
     is_control_plane: "{{ control_plane | default(false) | bool }}"
-    is_worker_node: "{{ is_worker_node | default(false) | bool }}"
+    is_worker_node: "{{ worker_node | default(false) | bool }}"
 
   roles:
     - host_configuration
