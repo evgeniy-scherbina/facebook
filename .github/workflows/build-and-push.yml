@@ -1,0 +1,40 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build and push images to ECR Public
+        run: |
+          chmod +x scripts/build-and-push.sh
+          ./scripts/build-and-push.sh
+      
+      - name: Output image URLs
+        run: |
+          ECR_PUBLIC_ALIAS=$(aws ecr-public describe-registries --region us-east-1 --query 'registries[0].aliases[0].name' --output text)
+          PROJECT_NAME="${PROJECT_NAME:-facebook-chat}"
+          echo "## Docker Images Pushed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Message service: \`public.ecr.aws/${ECR_PUBLIC_ALIAS}/${PROJECT_NAME}-message-service:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Real-time-ntfn service: \`public.ecr.aws/${ECR_PUBLIC_ALIAS}/${PROJECT_NAME}-real-time-ntfn-service:latest\`" >> $GITHUB_STEP_SUMMARY
+

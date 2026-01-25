@@ -16,6 +16,7 @@ SERVICES=(
 
 echo "Building and pushing Docker images to ECR Public"
 echo "Registry: ${ECR_PUBLIC_REGISTRY}/${ECR_PUBLIC_ALIAS}"
+echo "Project: ${PROJECT_NAME}"
 echo ""
 
 # Login to ECR Public
