@@ -6,7 +6,7 @@ metadata:
   labels:
     app: message-service
 spec:
-  type: ClusterIP
+  type: ClusterIP  # Use ClusterIP for internal access, or NodePort for external access
   ports:
   - port: 80
     targetPort: 8080
