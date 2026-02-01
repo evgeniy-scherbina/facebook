@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: message-service
+  namespace: chat-app
+  labels:
+    app: message-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: message-service
+  template:
+    metadata:
+      labels:
+        app: message-service
+    spec:
+      containers:
+      - name: message-service
+        image: public.ecr.aws/p9v6t1o7/facebook-chat-message-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: PORT
+          value: "8080"
+        - name: NOTIFICATION_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: chat-config
+              key: NOTIFICATION_SERVICE_URL
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
