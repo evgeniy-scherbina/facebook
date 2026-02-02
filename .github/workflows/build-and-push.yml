@@ -1,4 +1,4 @@
-name: Build and Push Docker Images
+name: Build, Push and Deploy
 
 on:
   push:
@@ -37,4 +37,38 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Message service: \`public.ecr.aws/${ECR_PUBLIC_ALIAS}/${PROJECT_NAME}-message-service:latest\`" >> $GITHUB_STEP_SUMMARY
           echo "- Real-time-ntfn service: \`public.ecr.aws/${ECR_PUBLIC_ALIAS}/${PROJECT_NAME}-real-time-ntfn-service:latest\`" >> $GITHUB_STEP_SUMMARY
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      
+      - name: Configure kubectl with kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+      
+      - name: Deploy to Kubernetes
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh
+      
+      - name: Output deployment status
+        run: |
+          echo "## Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pods" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n chat-app >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services" >> $GITHUB_STEP_SUMMARY
+          kubectl get svc -n chat-app >> $GITHUB_STEP_SUMMARY
 
