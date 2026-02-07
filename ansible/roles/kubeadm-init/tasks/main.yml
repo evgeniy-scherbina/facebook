@@ -41,3 +41,17 @@
     group: "{{ kube_user }}"
     mode: '0600'
   become: yes
+
+- name: Get control plane public IP from EC2 metadata
+  shell: curl -s http://169.254.169.254/latest/meta-data/public-ipv4
+  register: control_plane_public_ip
+  changed_when: false
+
+- name: Update kubeconfig to use public IP for external access
+  shell: |
+    export KUBECONFIG={{ user_home_result.stdout }}/.kube/config
+    kubectl config set-cluster kubernetes \
+      --server=https://{{ control_plane_public_ip.stdout }}:6443
+  become: yes
+  become_user: "{{ kube_user }}"
+  when: control_plane_public_ip.stdout != ""
