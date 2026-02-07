@@ -5,6 +5,10 @@ on:
     branches:
       - master
       - main
+#  pull_request:
+#    branches:
+#      - master
+#      - main
 
 jobs:
   build-and-push:
@@ -56,7 +60,10 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
-      
+
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+
       - name: Deploy to Kubernetes
         run: |
           chmod +x scripts/deploy.sh

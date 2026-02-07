@@ -1,6 +1,20 @@
 ---
+- name: Get control plane public IP from EC2 metadata
+  shell: curl -s http://169.254.169.254/latest/meta-data/public-ipv4
+  register: control_plane_public_ip
+  changed_when: false
+
+- name: Get control plane private IP from EC2 metadata
+  shell: curl -s http://169.254.169.254/latest/meta-data/local-ipv4
+  register: control_plane_private_ip
+  changed_when: false
+
 - name: Initialize Kubernetes cluster with kubeadm
-  command: kubeadm init --ignore-preflight-errors="NumCPU,Mem" # TODO: remove NumCPU,Mem
+  command: >
+    kubeadm init
+    --ignore-preflight-errors="NumCPU,Mem"
+    --apiserver-advertise-address={{ control_plane_private_ip.stdout }}
+    --apiserver-cert-extra-sans={{ control_plane_public_ip.stdout }}
   become: yes
   args:
     creates: /etc/kubernetes/admin.conf

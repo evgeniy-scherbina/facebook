@@ -13,6 +13,7 @@ provider "aws" {
   region = var.aws_region
 }
 
+
 # Get the latest Ubuntu 22.04 AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -62,14 +63,14 @@ resource "aws_security_group_rule" "control_plane_ssh" {
   description       = "SSH access"
 }
 
-resource "aws_security_group_rule" "control_plane_api_from_my_ip" {
+resource "aws_security_group_rule" "control_plane_api_from_anywhere" {
   type              = "ingress"
   from_port         = 6443
   to_port           = 6443
   protocol          = "tcp"
-  cidr_blocks       = ["${var.my_ip}/32"]
+  cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.k8s_control_plane_sg.id
-  description       = "Kubernetes API Server (kubectl) from my IP"
+  description       = "Kubernetes API Server (kubectl) - kubeconfig still required for access"
 }
 
 resource "aws_security_group_rule" "control_plane_api_from_workers" {
