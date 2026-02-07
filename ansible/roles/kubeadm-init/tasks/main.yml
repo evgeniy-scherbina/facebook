@@ -1,10 +1,25 @@
 ---
+- name: Get control plane public IP from EC2 metadata
+  shell: curl -s http://169.254.169.254/latest/meta-data/public-ipv4
+  register: control_plane_public_ip
+  changed_when: false
+
+- name: Get control plane private IP from EC2 metadata
+  shell: curl -s http://169.254.169.254/latest/meta-data/local-ipv4
+  register: control_plane_private_ip
+  changed_when: false
+
 - name: Initialize Kubernetes cluster with kubeadm
-  command: kubeadm init --ignore-preflight-errors="NumCPU,Mem" # TODO: remove NumCPU,Mem
+  command: >
+    kubeadm init
+    --ignore-preflight-errors="NumCPU,Mem"
+    --apiserver-advertise-address={{ control_plane_private_ip.stdout }}
+    --apiserver-cert-extra-sans={{ control_plane_public_ip.stdout }}
   become: yes
   args:
     creates: /etc/kubernetes/admin.conf
   register: kubeadm_init_result
+  when: control_plane_public_ip.stdout != ""
 
 - name: Display kubeadm init output
   debug:
@@ -41,17 +56,3 @@
     group: "{{ kube_user }}"
     mode: '0600'
   become: yes
-
-- name: Get control plane public IP from EC2 metadata
-  shell: curl -s http://169.254.169.254/latest/meta-data/public-ipv4
-  register: control_plane_public_ip
-  changed_when: false
-
-- name: Update kubeconfig to use public IP for external access
-  shell: |
-    export KUBECONFIG={{ user_home_result.stdout }}/.kube/config
-    kubectl config set-cluster kubernetes \
-      --server=https://{{ control_plane_public_ip.stdout }}:6443
-  become: yes
-  become_user: "{{ kube_user }}"
-  when: control_plane_public_ip.stdout != ""
