@@ -156,6 +156,17 @@ resource "aws_ssm_parameter" "control_plane_ip" {
   }
 }
 
+# AWS Systems Manager Parameter Store for kubeconfig
+resource "aws_ssm_parameter" "kubeconfig" {
+  name  = "/${var.project_name}/kubeconfig"
+  type  = "SecureString"
+  value = "pending" # Will be updated by control plane after initialization
+
+  tags = {
+    Name = "${var.project_name}-kubeconfig"
+  }
+}
+
 # IAM role for control plane to write to Parameter Store
 resource "aws_iam_role" "control_plane_ssm" {
   name = "${var.project_name}-control-plane-ssm-role"
@@ -188,7 +199,10 @@ resource "aws_iam_role_policy" "control_plane_ssm" {
           "ssm:GetParameter",
           "ssm:UpdateParameter"
         ]
-        Resource = aws_ssm_parameter.control_plane_ip.arn
+        Resource = [
+          aws_ssm_parameter.control_plane_ip.arn,
+          aws_ssm_parameter.kubeconfig.arn
+        ]
       }
     ]
   })
