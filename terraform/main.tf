@@ -160,6 +160,7 @@ resource "aws_ssm_parameter" "control_plane_ip" {
 resource "aws_ssm_parameter" "kubeconfig" {
   name  = "/${var.project_name}/kubeconfig"
   type  = "SecureString"
+  tier  = "Advanced"  # Required for values > 4096 characters
   value = "pending" # Will be updated by control plane after initialization
 
   tags = {
