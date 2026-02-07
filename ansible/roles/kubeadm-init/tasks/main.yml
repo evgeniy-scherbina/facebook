@@ -19,7 +19,6 @@
   args:
     creates: /etc/kubernetes/admin.conf
   register: kubeadm_init_result
-  when: control_plane_public_ip.stdout != ""
 
 - name: Display kubeadm init output
   debug:
