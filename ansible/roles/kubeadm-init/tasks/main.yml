@@ -46,7 +46,7 @@
     group: "{{ kube_user }}"
   become: yes
 
-- name: Copy Kubernetes admin config to user .kube directory
+- name: Copy Kubernetes admin config to user .kube directory (internal use - private IP)
   copy:
     src: /etc/kubernetes/admin.conf
     dest: "{{ user_home_result.stdout }}/.kube/config"
@@ -61,20 +61,21 @@
   register: aws_region_result
   changed_when: false
 
-- name: Update kubeconfig to use public IP for external access
+- name: Create external kubeconfig with public IP for external consumers
   shell: |
-    export KUBECONFIG={{ user_home_result.stdout }}/.kube/config
+    cp {{ user_home_result.stdout }}/.kube/config {{ user_home_result.stdout }}/.kube/config.external
+    export KUBECONFIG={{ user_home_result.stdout }}/.kube/config.external
     kubectl config set-cluster kubernetes \
       --server=https://{{ control_plane_public_ip.stdout }}:6443
   become: yes
   become_user: "{{ kube_user }}"
   when: control_plane_public_ip.stdout != ""
 
-- name: Upload kubeconfig to SSM Parameter Store
+- name: Upload external kubeconfig to SSM Parameter Store
   shell: |
     aws ssm put-parameter \
       --name "/facebook-chat/kubeconfig" \
-      --value "$(cat {{ user_home_result.stdout }}/.kube/config)" \
+      --value "$(cat {{ user_home_result.stdout }}/.kube/config.external)" \
       --type "SecureString" \
       --overwrite \
       --region {{ aws_region_result.stdout }}
