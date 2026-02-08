@@ -7,6 +7,7 @@ if [ -z "$ECR_PUBLIC_ALIAS" ]; then
 fi
 ECR_PUBLIC_REGISTRY="public.ecr.aws"
 PROJECT_NAME="${PROJECT_NAME:-facebook-chat}"
+MAX_IMAGES_TO_KEEP="${MAX_IMAGES_TO_KEEP:-3}"  # Keep 3 most recent images
 
 # Define services (add new services here)
 SERVICES=(
@@ -47,6 +48,49 @@ for service_config in "${SERVICES[@]}"; do
   docker push "${image_tag}" > /dev/null 2>&1
   
   echo "  ✓ ${image_tag}"
+  
+  # Clean up old images (keep only MAX_IMAGES_TO_KEEP most recent)
+  echo "  Cleaning up old images (keeping ${MAX_IMAGES_TO_KEEP} most recent)..."
+  
+  # Get all images with their push dates, sort by date (oldest first)
+  # Format: timestamp<TAB>digest
+  image_list=$(aws ecr-public describe-images \
+    --repository-name "${repo_name}" \
+    --region us-east-1 \
+    --query 'imageDetails[*].[imagePushedAt, imageDigest]' \
+    --output text 2>/dev/null | sort || echo "")
+  
+  if [ -n "$image_list" ] && [ "$(echo "$image_list" | wc -l)" -gt 0 ]; then
+    # Count total images
+    total_images=$(echo "$image_list" | wc -l)
+    
+    if [ "$total_images" -gt "$MAX_IMAGES_TO_KEEP" ]; then
+      # Calculate how many to delete
+      images_to_delete_count=$((total_images - MAX_IMAGES_TO_KEEP))
+      
+      # Get digests of oldest images (first images_to_delete_count lines)
+      images_to_delete=$(echo "$image_list" | head -n ${images_to_delete_count} | awk '{print $2}')
+      
+      if [ -n "$images_to_delete" ]; then
+        # Delete old images one by one
+        deleted=0
+        for digest in $images_to_delete; do
+          if aws ecr-public batch-delete-image \
+            --repository-name "${repo_name}" \
+            --region us-east-1 \
+            --image-ids "{\"imageDigest\":\"${digest}\"}" > /dev/null 2>&1; then
+            deleted=$((deleted + 1))
+          fi
+        done
+        
+        if [ "$deleted" -gt 0 ]; then
+          echo "  ✓ Deleted ${deleted} old image(s) (kept ${MAX_IMAGES_TO_KEEP} most recent)"
+        fi
+      fi
+    else
+      echo "  ✓ No cleanup needed (${total_images} image(s) total, keeping ${MAX_IMAGES_TO_KEEP})"
+    fi
+  fi
 done
 
 echo ""
