@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: chat-config
-  namespace: chat-app
-data:
-  NOTIFICATION_SERVICE_URL: "http://real-time-ntfn-service"
-
