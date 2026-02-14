@@ -8,5 +8,4 @@ resources:
   - configmap.yaml
   - message/
   - real-time-ntfn/
-  # - ingress.yaml  # Uncomment if you install an ingress controller
-
+  - ingress.yaml  #  requires installed ingress controller
