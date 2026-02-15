@@ -6,8 +6,10 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: chat.local
-    http:
+  # Comment out host to allow access via IP address
+  # When you have a domain, uncomment and set: host: yourdomain.com
+  # - host: chat.local
+  - http:
       paths:
       - path: /
         pathType: Prefix

@@ -145,6 +145,38 @@ resource "aws_security_group_rule" "control_plane_http_from_workers" {
   description              = "HTTP server for kubeconfig and join command from workers"
 }
 
+# Allow all traffic between all Kubernetes nodes (control plane and workers)
+# This covers Calico BGP, IPIP, pod networking, and any other inter-node communication
+resource "aws_security_group_rule" "control_plane_from_workers" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "-1"  # All protocols
+  source_security_group_id = aws_security_group.k8s_workers_sg.id
+  security_group_id        = aws_security_group.k8s_control_plane_sg.id
+  description              = "Allow all traffic from workers to control plane (Calico, pod networking, etc.)"
+}
+
+resource "aws_security_group_rule" "workers_from_control_plane" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "-1"  # All protocols
+  source_security_group_id = aws_security_group.k8s_control_plane_sg.id
+  security_group_id        = aws_security_group.k8s_workers_sg.id
+  description              = "Allow all traffic from control plane to workers (Calico, pod networking, etc.)"
+}
+
+resource "aws_security_group_rule" "workers_from_workers" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "-1"  # All protocols
+  source_security_group_id = aws_security_group.k8s_workers_sg.id
+  security_group_id        = aws_security_group.k8s_workers_sg.id
+  description              = "Allow all traffic between workers (Calico, pod networking, etc.)"
+}
+
 # AWS Systems Manager Parameter Store for control plane IP
 resource "aws_ssm_parameter" "control_plane_ip" {
   name  = "/${var.project_name}/control-plane/private-ip"
