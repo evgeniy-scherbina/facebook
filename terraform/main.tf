@@ -177,28 +177,8 @@ resource "aws_security_group_rule" "workers_from_workers" {
   description              = "Allow all traffic between workers (Calico, pod networking, etc.)"
 }
 
-# AWS Systems Manager Parameter Store for control plane IP
-resource "aws_ssm_parameter" "control_plane_ip" {
-  name  = "/${var.project_name}/control-plane/private-ip"
-  type  = "String"
-  value = "pending" # Will be updated by control plane after initialization
-
-  tags = {
-    Name = "${var.project_name}-control-plane-ip"
-  }
-}
-
-# AWS Systems Manager Parameter Store for kubeconfig
-resource "aws_ssm_parameter" "kubeconfig" {
-  name  = "/${var.project_name}/kubeconfig"
-  type  = "SecureString"
-  tier  = "Advanced"  # Required for values > 4096 characters
-  value = "pending" # Will be updated by control plane after initialization
-
-  tags = {
-    Name = "${var.project_name}-kubeconfig"
-  }
-}
+# SSM Parameters are created/updated by Ansible and user_data scripts
+# Not managed by Terraform to avoid conflicts
 
 # IAM role for control plane to write to Parameter Store
 resource "aws_iam_role" "control_plane_ssm" {
@@ -233,8 +213,8 @@ resource "aws_iam_role_policy" "control_plane_ssm" {
           "ssm:UpdateParameter"
         ]
         Resource = [
-          aws_ssm_parameter.control_plane_ip.arn,
-          aws_ssm_parameter.kubeconfig.arn
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/control-plane/private-ip",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/kubeconfig"
         ]
       }
     ]
@@ -277,7 +257,7 @@ resource "aws_iam_role_policy" "worker_ssm" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Resource = aws_ssm_parameter.control_plane_ip.arn
+        Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/control-plane/private-ip"
       }
     ]
   })
