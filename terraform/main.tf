@@ -114,6 +114,28 @@ resource "aws_security_group_rule" "workers_nodeport_from_my_ip" {
   description       = "NodePort services from my IP"
 }
 
+# Allow LoadBalancer traffic to reach nodes (required for LoadBalancer services)
+# AWS LoadBalancers need to reach nodes, and they can come from anywhere
+resource "aws_security_group_rule" "workers_from_loadbalancer" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "-1"  # All protocols
+  cidr_blocks       = ["0.0.0.0/0"]  # LoadBalancers can come from anywhere
+  security_group_id = aws_security_group.k8s_workers_sg.id
+  description       = "Allow LoadBalancer traffic to reach worker nodes"
+}
+
+resource "aws_security_group_rule" "control_plane_from_loadbalancer" {
+  type              = "ingress"
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "-1"  # All protocols
+  cidr_blocks       = ["0.0.0.0/0"]  # LoadBalancers can come from anywhere
+  security_group_id = aws_security_group.k8s_control_plane_sg.id
+  description       = "Allow LoadBalancer traffic to reach control plane"
+}
+
 resource "aws_security_group_rule" "workers_kubelet_from_control_plane" {
   type                     = "ingress"
   from_port                = 10250
