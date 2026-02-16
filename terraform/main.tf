@@ -238,6 +238,33 @@ resource "aws_iam_role_policy" "control_plane_ssm" {
           "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/control-plane/private-ip",
           "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/kubeconfig"
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeRegions",
+          "ec2:DescribeRouteTables",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeVolumes",
+          "ec2:CreateSecurityGroup",
+          "ec2:CreateTags",
+          "ec2:CreateLoadBalancer",
+          "ec2:CreateLoadBalancerListeners",
+          "ec2:DeleteLoadBalancer",
+          "ec2:DeleteLoadBalancerListeners",
+          "ec2:ModifyLoadBalancerAttributes",
+          "ec2:RegisterInstancesWithLoadBalancer",
+          "ec2:DeregisterInstancesFromLoadBalancer",
+          "ec2:DescribeLoadBalancers",
+          "ec2:DescribeLoadBalancerAttributes",
+          "ec2:AddTags",
+          "ec2:RemoveTags",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -280,6 +307,20 @@ resource "aws_iam_role_policy" "worker_ssm" {
           "ssm:GetParameters"
         ]
         Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/control-plane/private-ip"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeRegions",
+          "ec2:DescribeRouteTables",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeLoadBalancers",
+          "ec2:DescribeLoadBalancerAttributes"
+        ]
+        Resource = "*"
       }
     ]
   })

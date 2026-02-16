@@ -15,6 +15,8 @@
       when: is_control_plane | bool
     - role: install-calico
       when: is_control_plane | bool
+    - role: install-ccm
+      when: is_control_plane | bool
     - role: install-infrastructure
       when: is_control_plane | bool
     - role: kubeadm-join

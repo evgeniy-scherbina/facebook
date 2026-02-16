@@ -1,0 +1,49 @@
+---
+- name: Set kube_user variable
+  set_fact:
+    kube_user: "ubuntu"
+
+- name: Get user home directory
+  shell: echo ~{{ kube_user }}
+  register: user_home_result
+  changed_when: false
+
+- name: Install AWS Cloud Controller Manager RBAC
+  command: kubectl apply -f {{ user_home_result.stdout }}/facebook/k8s/infrastructure/aws-ccm/rbac.yaml
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+
+- name: Install AWS Cloud Controller Manager DaemonSet
+  command: kubectl apply -f {{ user_home_result.stdout }}/facebook/k8s/infrastructure/aws-ccm/daemonset.yaml
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+
+- name: Wait for CCM to be ready
+  command: kubectl wait --namespace kube-system --for=condition=ready pod -l app=aws-cloud-controller-manager --timeout=120s
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ccm_wait_result
+  changed_when: false
+  ignore_errors: true
+
+- name: Display CCM status
+  command: kubectl get pods -n kube-system -l app=aws-cloud-controller-manager
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ccm_pods
+  changed_when: false
+
+- name: Show CCM installation summary
+  debug:
+    msg:
+      - "AWS Cloud Controller Manager installation completed"
+      - "Pods: {{ ccm_pods.stdout_lines }}"
+
