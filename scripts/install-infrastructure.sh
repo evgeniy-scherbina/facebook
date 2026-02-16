@@ -49,4 +49,3 @@ kubectl get svc -n ingress-nginx ingress-nginx-controller
 echo ""
 echo "To get the external IP for DNS configuration:"
 echo "  kubectl get svc -n ingress-nginx ingress-nginx-controller"
-
