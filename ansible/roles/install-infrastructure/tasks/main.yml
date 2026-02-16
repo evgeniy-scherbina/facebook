@@ -1,0 +1,70 @@
+---
+- name: Set kube_user variable
+  set_fact:
+    kube_user: "ubuntu"
+
+- name: Get user home directory
+  shell: echo ~{{ kube_user }}
+  register: user_home_result
+  changed_when: false
+
+- name: Check if Ingress Controller namespace exists
+  command: kubectl get namespace ingress-nginx
+  register: ingress_namespace_check
+  changed_when: false
+  failed_when: false
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+
+- name: Install NGINX Ingress Controller
+  command: kubectl apply -f {{ user_home_result.stdout }}/facebook/k8s/infrastructure/ingress-nginx/deploy.yaml
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ingress_install_result
+  changed_when: "'created' in ingress_install_result.stdout or 'configured' in ingress_install_result.stdout"
+
+- name: Wait for Ingress Controller to be ready
+  command: >
+    kubectl wait --namespace ingress-nginx
+    --for=condition=ready pod
+    --selector=app.kubernetes.io/component=controller
+    --timeout=300s
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ingress_wait_result
+  changed_when: false
+  # Don't fail if timeout - controller might still be starting
+  ignore_errors: true
+
+- name: Display Ingress Controller status
+  command: kubectl get pods -n ingress-nginx
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ingress_pods
+  changed_when: false
+
+- name: Display Ingress Controller service
+  command: kubectl get svc -n ingress-nginx ingress-nginx-controller
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ingress_svc
+  changed_when: false
+
+- name: Show Ingress Controller installation summary
+  debug:
+    msg:
+      - "Ingress Controller installation completed"
+      - "Pods: {{ ingress_pods.stdout_lines }}"
+      - "Service: {{ ingress_svc.stdout_lines }}"
+      - "To get external IP: kubectl get svc -n ingress-nginx ingress-nginx-controller"
+
