@@ -47,3 +47,5 @@
       - "AWS Cloud Controller Manager installation completed"
       - "Pods: {{ ccm_pods.stdout_lines }}"
 
+
+

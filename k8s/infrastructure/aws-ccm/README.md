@@ -42,3 +42,5 @@ kubectl get svc -n ingress-nginx ingress-nginx-controller
 
 The `EXTERNAL-IP` should change from `<pending>` to an actual IP/hostname.
 
+
+

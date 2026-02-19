@@ -262,7 +262,26 @@ resource "aws_iam_role_policy" "control_plane_ssm" {
           "ec2:AddTags",
           "ec2:RemoveTags",
           "ec2:AuthorizeSecurityGroupIngress",
-          "ec2:RevokeSecurityGroupIngress"
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:DescribeAvailabilityZones"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeTags",
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:CreateLoadBalancerListeners",
+          "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:ModifyLoadBalancerAttributes",
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:RemoveTags",
+          "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+          "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+          "elasticloadbalancing:ConfigureHealthCheck"
         ]
         Resource = "*"
       }
@@ -317,8 +336,40 @@ resource "aws_iam_role_policy" "worker_ssm" {
           "ec2:DescribeSecurityGroups",
           "ec2:DescribeSubnets",
           "ec2:DescribeVolumes",
+          "ec2:CreateSecurityGroup",
+          "ec2:CreateTags",
+          "ec2:CreateLoadBalancer",
+          "ec2:CreateLoadBalancerListeners",
+          "ec2:DeleteLoadBalancer",
+          "ec2:DeleteLoadBalancerListeners",
+          "ec2:ModifyLoadBalancerAttributes",
+          "ec2:RegisterInstancesWithLoadBalancer",
+          "ec2:DeregisterInstancesFromLoadBalancer",
           "ec2:DescribeLoadBalancers",
-          "ec2:DescribeLoadBalancerAttributes"
+          "ec2:DescribeLoadBalancerAttributes",
+          "ec2:AddTags",
+          "ec2:RemoveTags",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:DescribeAvailabilityZones"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeTags",
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:CreateLoadBalancerListeners",
+          "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:ModifyLoadBalancerAttributes",
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:RemoveTags",
+          "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+          "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+          "elasticloadbalancing:ConfigureHealthCheck"
         ]
         Resource = "*"
       }
@@ -343,6 +394,8 @@ resource "aws_instance" "k8s_control_plane" {
   tags = {
     Name = "${var.project_name}-control-plane"
     Role = "control-plane"
+    "kubernetes.io/cluster/kubernetes" = "owned"
+    "KubernetesCluster" = "kubernetes"
   }
 
   # User data script to install Ansible and run playbook
@@ -381,6 +434,8 @@ resource "aws_instance" "k8s_workers" {
   tags = {
     Name = "${var.project_name}-worker-${count.index + 1}"
     Role = "worker"
+    "kubernetes.io/cluster/kubernetes" = "owned"
+    "KubernetesCluster" = "kubernetes"
   }
 
   # User data script to install Ansible and run playbook
