@@ -40,11 +40,12 @@
   become: yes
   become_user: "{{ kube_user }}"
 
+# Match only the LoadBalancer Service (has externalTrafficPolicy after spec:), not the Deployment (has minReadySeconds)
 - name: Inject CLB subnet annotation into Service before first apply
   replace:
     path: /tmp/ingress-nginx-deploy.yaml
-    regexp: '  name: ingress-nginx-controller\n  namespace: ingress-nginx\nspec:'
-    replace: '  name: ingress-nginx-controller\n  namespace: ingress-nginx\n  annotations:\n    service.beta.kubernetes.io/aws-load-balancer-subnets: "{{ node_subnet_id_result.stdout | trim }}"\nspec:'
+    regexp: '  name: ingress-nginx-controller\n  namespace: ingress-nginx\nspec:\n  externalTrafficPolicy'
+    replace: '  name: ingress-nginx-controller\n  namespace: ingress-nginx\n  annotations:\n    service.beta.kubernetes.io/aws-load-balancer-subnets: "{{ node_subnet_id_result.stdout | trim }}"\nspec:\n  externalTrafficPolicy'
   become: yes
   when: node_subnet_id_result.stdout | length > 0
 

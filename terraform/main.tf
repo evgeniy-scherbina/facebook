@@ -429,7 +429,10 @@ resource "aws_instance" "k8s_control_plane" {
   subnet_id     = local.node_subnet_id
 
   vpc_security_group_ids = [aws_security_group.k8s_control_plane_sg.id]
-  iam_instance_profile    = aws_iam_instance_profile.control_plane_ssm.name
+  iam_instance_profile   = aws_iam_instance_profile.control_plane_ssm.name
+
+  # Ensure SSM parameter exists before instance boots so user_data (Ansible) can read node-subnet-id for CLB annotation
+  depends_on = [aws_ssm_parameter.node_subnet_id]
   
   tags = {
     Name = "${var.project_name}-control-plane"
@@ -471,6 +474,8 @@ resource "aws_instance" "k8s_workers" {
 
   vpc_security_group_ids = [aws_security_group.k8s_workers_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.worker_ssm.name
+
+  depends_on = [aws_ssm_parameter.node_subnet_id]
   
   tags = {
     Name = "${var.project_name}-worker-${count.index + 1}"
