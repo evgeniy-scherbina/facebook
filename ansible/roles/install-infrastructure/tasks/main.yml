@@ -13,6 +13,24 @@
   register: aws_region_infra
   changed_when: false
 
+# CCM can only register instances with the CLB when nodes have ProviderID set.
+# If we create the Service before ProviderIDs exist, CLB ends up with 0 targets (race at bring-up).
+- name: Wait for all nodes to have ProviderID (so CCM can register them with CLB)
+  shell: |
+    N=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
+    [[ "$N" -eq 0 ]] && exit 1
+    P=$(kubectl get nodes -o jsonpath='{.items[*].spec.providerID}' 2>/dev/null | tr ' ' '\n' | grep -c '^aws://' || true)
+    [[ "$N" -eq "$P" ]] && exit 0 || exit 1
+  register: provider_id_ready
+  until: provider_id_ready.rc == 0
+  retries: 30
+  delay: 10
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  changed_when: false
+
 - name: Get node subnet ID from SSM (same subnet as EC2 nodes; CLB will use this)
   shell: |
     aws ssm get-parameter --name "/facebook-chat/node-subnet-id" --region {{ aws_region_infra.stdout }} --query 'Parameter.Value' --output text
