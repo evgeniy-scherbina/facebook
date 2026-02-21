@@ -34,6 +34,23 @@
     mode: '0755'
   become: yes
 
+- name: Parse join command for endpoint, token and CA hash
+  set_fact:
+    join_api_server_endpoint: "{{ (kubeadm_join_command.stdout | trim).split()[2] }}"
+    join_token: "{{ (kubeadm_join_command.stdout | trim).split('--token ')[1].split()[0] }}"
+    join_ca_cert_hash: "{{ (kubeadm_join_command.stdout | trim).split('--discovery-token-ca-cert-hash ')[1].split()[0] }}"
+  when: kubeadm_join_command.stdout != ""
+
+- name: Generate join-config.yaml with cloud-provider=external for workers
+  template:
+    src: join-config.yaml.j2
+    dest: /home/ubuntu/k8s-files/join-config.yaml
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  become: yes
+  when: kubeadm_join_command.stdout != ""
+
 - name: Copy kubeconfig to shared directory
   copy:
     src: "{{ user_home_result.stdout }}/.kube/config"

@@ -1,0 +1,29 @@
+# Same as: kubeadm init --apiserver-advertise-address=... --apiserver-cert-extra-sans=... --ignore-preflight-errors=NumCPU,Mem
+# plus kubelet --cloud-provider=external (for CCM to set node ProviderID and register ELB instances)
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "{{ control_plane_private_ip.stdout }}"
+  bindPort: 6443
+nodeRegistration:
+  criSocket: "unix:///var/run/containerd/containerd.sock"
+  ignorePreflightErrors:
+    - NumCPU
+    - Mem
+  kubeletExtraArgs:
+    - name: cloud-provider
+      value: external
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+apiServer:
+  certSANs:
+    - "{{ control_plane_private_ip.stdout }}"
+    - "10.96.0.1"
+    - "localhost"
+    - "127.0.0.1"
+{% if control_plane_public_ip.stdout %}
+    - "{{ control_plane_public_ip.stdout }}"
+{% endif %}
+networking:
+  podSubnet: "192.168.0.0/16"

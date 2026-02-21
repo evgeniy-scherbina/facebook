@@ -79,6 +79,16 @@
   delay: 10
   register: fetch_join_cmd_result
 
+- name: Fetch join-config.yaml from control plane (cloud-provider=external for CCM)
+  get_url:
+    url: "http://{{ control_plane_ip }}:8080/join-config.yaml"
+    dest: /tmp/join-config.yaml
+    mode: '0644'
+  retries: 5
+  delay: 10
+  register: fetch_join_config_result
+  failed_when: false
+
 - name: Read kubeadm join command
   slurp:
     src: /tmp/kubeadm-join-command.txt
@@ -89,14 +99,23 @@
 - name: Set kubeadm join command from file
   set_fact:
     kubeadm_join_cmd: "{{ kubeadm_join_file.content | b64decode | trim }}"
-  when: 
+  when:
     - kubeadm_join_file.content is defined
     - kubeadm_join_file.content | length > 0
 
-- name: Run kubeadm join command
+- name: Run kubeadm join with config (cloud-provider=external)
+  command: kubeadm join --config /tmp/join-config.yaml
+  become: yes
+  when: fetch_join_config_result is succeeded
+  register: kubeadm_join_result
+  ignore_errors: yes
+
+- name: Run kubeadm join command (fallback when join-config not available)
   command: "{{ kubeadm_join_cmd }}"
   become: yes
-  when: kubeadm_join_cmd is defined
+  when:
+    - kubeadm_join_cmd is defined
+    - fetch_join_config_result is failed or fetch_join_config_result is skipped
   register: kubeadm_join_result
   ignore_errors: yes
 

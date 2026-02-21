@@ -1,0 +1,13 @@
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: "{{ join_api_server_endpoint }}"
+    token: "{{ join_token }}"
+    caCertHashes:
+      - "{{ join_ca_cert_hash }}"
+nodeRegistration:
+  criSocket: "unix:///var/run/containerd/containerd.sock"
+  kubeletExtraArgs:
+    - name: cloud-provider
+      value: external
