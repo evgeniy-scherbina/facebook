@@ -14,7 +14,7 @@ provider "aws" {
 }
 
 
-# Single subnet for all nodes and CLB (default: first subnet in default VPC)
+# Single subnet for all nodes and CLB (default: first subnet in default VPC, excluding us-east-1e where t3 not supported)
 data "aws_vpc" "default" {
   default = true
 }
@@ -26,8 +26,15 @@ data "aws_subnets" "default" {
   }
 }
 
+data "aws_subnet" "default_each" {
+  for_each = toset(data.aws_subnets.default.ids)
+  id       = each.value
+}
+
 locals {
-  node_subnet_id = var.node_subnet_id != "" ? var.node_subnet_id : tolist(data.aws_subnets.default.ids)[0]
+  # t3.medium not supported in us-east-1e; prefer subnets in us-east-1a, 1b, 1c, 1d, 1f
+  supported_subnet_ids = [for id, s in data.aws_subnet.default_each : id if s.availability_zone != "us-east-1e"]
+  node_subnet_id      = var.node_subnet_id != "" ? var.node_subnet_id : (length(local.supported_subnet_ids) > 0 ? local.supported_subnet_ids[0] : tolist(data.aws_subnets.default.ids)[0])
 }
 
 # Get the latest Ubuntu 22.04 AMI

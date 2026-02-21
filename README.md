@@ -216,3 +216,6 @@ For production deployments, consider:
 - Implementing proper error handling and retry logic
 - Adding metrics and monitoring
 - Using proper service discovery mechanisms
+
+## Local
+scp -i "~/Downloads/k8s.pem" ubuntu@ec2-54-164-201-199.compute-1.amazonaws.com:/home/ubuntu/.kube/config.external ~/.kube/config
