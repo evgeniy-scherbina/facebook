@@ -18,9 +18,9 @@
 - name: Wait for all nodes to have ProviderID (so CCM can register them with CLB)
   shell: |
     N=$(kubectl get nodes --no-headers 2>/dev/null | wc -l)
-    [[ "$N" -eq 0 ]] && exit 1
+    [ "$N" -eq 0 ] && exit 1
     P=$(kubectl get nodes -o jsonpath='{.items[*].spec.providerID}' 2>/dev/null | tr ' ' '\n' | grep -c '^aws://' || true)
-    [[ "$N" -eq "$P" ]] && exit 0 || exit 1
+    [ "$N" -eq "$P" ] && exit 0 || exit 1
   register: provider_id_ready
   until: provider_id_ready.rc == 0
   retries: 30
