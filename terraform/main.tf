@@ -126,6 +126,11 @@ resource "aws_security_group_rule" "workers_from_loadbalancer" {
   description       = "Allow LoadBalancer traffic to reach worker nodes"
 }
 
+# Note: LoadBalancer security groups are created by CCM and need to be allowed
+# to reach nodes on health check ports (typically 30000-32767 for NodePorts)
+# The CCM will automatically create security group rules, but we allow from 0.0.0.0/0
+# above as a catch-all. For production, you may want to restrict this.
+
 resource "aws_security_group_rule" "control_plane_from_loadbalancer" {
   type              = "ingress"
   from_port         = 0
