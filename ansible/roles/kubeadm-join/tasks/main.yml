@@ -123,4 +123,3 @@
   debug:
     var: kubeadm_join_result.stdout_lines
   when: kubeadm_join_result is defined
-
