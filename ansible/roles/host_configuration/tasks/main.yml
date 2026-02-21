@@ -1,4 +1,17 @@
 ---
+# AWS CCM matches nodes by EC2 private DNS name (e.g. ip-172-31-17-60.us-east-1.compute.internal).
+# Set hostname to that so kubelet registers with the name CCM expects → ProviderID gets set → ELB gets instances.
+- name: Get EC2 private DNS hostname from instance metadata
+  shell: curl -s http://169.254.169.254/latest/meta-data/hostname
+  register: ec2_hostname_result
+  changed_when: false
+  failed_when: false
+
+- name: Set hostname to EC2 private DNS for CCM node matching
+  hostname:
+    name: "{{ ec2_hostname_result.stdout }}"
+  when: ec2_hostname_result.stdout | length > 0
+
 - name: Create sysctl configuration file for Kubernetes
   copy:
     dest: /etc/sysctl.d/k8s.conf
