@@ -33,3 +33,12 @@ kubectl get svc -n ingress-nginx ingress-nginx-controller
 
 **Note:** This is a one-time installation. The Ingress Controller persists across application deployments.
 
+### AWS Cloud Controller Manager (CCM) and LoadBalancer
+
+For the Ingress Controller’s `LoadBalancer` Service to get an external ELB and **automatically register cluster instances**, the cluster must use the **external cloud provider**:
+
+- **kubelet**, **kube-apiserver**, and **kube-controller-manager** must run with `--cloud-provider=external`.
+- The AWS CCM then sets each node’s `spec.providerID` and registers those instance IDs with the ELB.
+
+The Ansible playbook configures this via kubeadm (init and join configs with `cloud-provider=external`). After a full cluster recreate (Terraform + Ansible), the LoadBalancer should receive registered instances without manual steps.
+

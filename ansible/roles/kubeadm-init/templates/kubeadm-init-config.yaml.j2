@@ -1,0 +1,30 @@
+# kubeadm init config: kubelet with cloud-provider=external so CCM can set node ProviderID and register ELB instances
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "{{ control_plane_private_ip.stdout }}"
+  bindPort: 6443
+nodeRegistration:
+  criSocket: "unix:///var/run/containerd/containerd.sock"
+  kubeletExtraArgs:
+    - name: cloud-provider
+      value: external
+  ignorePreflightErrors:
+    - NumCPU
+    - Mem
+---
+apiVersion: kubeadm.k8s.io/v1beta4
+kind: ClusterConfiguration
+kubernetesVersion: "{{ k8s_version | default('v1.35') }}"
+apiServer:
+  certSANs:
+    - "{{ control_plane_private_ip.stdout }}"
+    - "10.96.0.1"
+    {% if control_plane_public_ip.stdout %}
+    - "{{ control_plane_public_ip.stdout }}"
+    {% endif %}
+    - "localhost"
+    - "127.0.0.1"
+networking:
+  podSubnet: "192.168.0.0/16"
+clusterName: "kubernetes"

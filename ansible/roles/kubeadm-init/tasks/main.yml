@@ -9,12 +9,22 @@
   register: control_plane_private_ip
   changed_when: false
 
-- name: Initialize Kubernetes cluster with kubeadm
-  command: >
-    kubeadm init
-    --ignore-preflight-errors="NumCPU,Mem"
-    --apiserver-advertise-address={{ control_plane_private_ip.stdout }}
-    --apiserver-cert-extra-sans={{ control_plane_public_ip.stdout }}
+- name: Ensure kubeadm config directory exists
+  file:
+    path: /etc/kubernetes
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Create kubeadm init config with external cloud provider
+  template:
+    src: kubeadm-init-config.yaml.j2
+    dest: /etc/kubernetes/kubeadm-init-config.yaml
+    mode: '0644'
+  become: yes
+
+- name: Initialize Kubernetes cluster with kubeadm (external cloud provider for CCM)
+  command: kubeadm init --config /etc/kubernetes/kubeadm-init-config.yaml
   become: yes
   args:
     creates: /etc/kubernetes/admin.conf
