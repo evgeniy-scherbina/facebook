@@ -16,3 +16,9 @@ variable "my_ip" {
   default     = "174.169.160.191"
 }
 
+variable "node_subnet_id" {
+  description = "Subnet ID for all K8s nodes (control plane + workers) and CLB. If empty, uses first subnet in default VPC."
+  type        = string
+  default     = ""
+}
+

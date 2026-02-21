@@ -14,6 +14,22 @@ provider "aws" {
 }
 
 
+# Single subnet for all nodes and CLB (default: first subnet in default VPC)
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+locals {
+  node_subnet_id = var.node_subnet_id != "" ? var.node_subnet_id : tolist(data.aws_subnets.default.ids)[0]
+}
+
 # Get the latest Ubuntu 22.04 AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -241,7 +257,8 @@ resource "aws_iam_role_policy" "control_plane_ssm" {
         ]
         Resource = [
           "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/control-plane/private-ip",
-          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/kubeconfig"
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/kubeconfig",
+          "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/node-subnet-id"
         ]
       },
       {
@@ -292,6 +309,16 @@ resource "aws_iam_role_policy" "control_plane_ssm" {
       }
     ]
   })
+}
+
+# Subnet ID for nodes (and CLB annotation); Ansible reads this to patch ingress-nginx Service
+resource "aws_ssm_parameter" "node_subnet_id" {
+  name  = "/${var.project_name}/node-subnet-id"
+  type  = "String"
+  value = local.node_subnet_id
+  tags = {
+    Name = "${var.project_name}-node-subnet-id"
+  }
 }
 
 resource "aws_iam_instance_profile" "control_plane_ssm" {
@@ -387,12 +414,13 @@ resource "aws_iam_instance_profile" "worker_ssm" {
   role = aws_iam_role.worker_ssm.name
 }
 
-# Create Kubernetes control plane instance
+# Create Kubernetes control plane instance (same subnet as workers so CLB can target all nodes)
 resource "aws_instance" "k8s_control_plane" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t3.medium"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
-  
+  subnet_id     = local.node_subnet_id
+
   vpc_security_group_ids = [aws_security_group.k8s_control_plane_sg.id]
   iam_instance_profile    = aws_iam_instance_profile.control_plane_ssm.name
   
@@ -426,13 +454,14 @@ resource "aws_instance" "k8s_control_plane" {
               EOF
 }
 
-# Create Kubernetes worker instances
+# Create Kubernetes worker instances (same subnet as control plane so CLB can target all nodes)
 resource "aws_instance" "k8s_workers" {
   count         = 2 # TODO: set to 2
   ami           = data.aws_ami.ubuntu.id
-  instance_type  = "t3.small"
+  instance_type = "t3.small"
   key_name      = "k8s"  # Existing SSH key pair in AWS account
-  
+  subnet_id     = local.node_subnet_id
+
   vpc_security_group_ids = [aws_security_group.k8s_workers_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.worker_ssm.name
   

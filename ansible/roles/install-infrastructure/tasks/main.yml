@@ -8,6 +8,18 @@
   register: user_home_result
   changed_when: false
 
+- name: Get AWS region from instance metadata
+  shell: curl -s http://169.254.169.254/latest/meta-data/placement/region
+  register: aws_region_infra
+  changed_when: false
+
+- name: Get node subnet ID from SSM (same subnet as EC2 nodes; CLB will use this)
+  shell: |
+    aws ssm get-parameter --name "/facebook-chat/node-subnet-id" --region {{ aws_region_infra.stdout }} --query 'Parameter.Value' --output text
+  register: node_subnet_id_result
+  changed_when: false
+  failed_when: false
+
 - name: Check if Ingress Controller namespace exists
   command: kubectl get namespace ingress-nginx
   register: ingress_namespace_check
@@ -26,6 +38,16 @@
     KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
   register: ingress_install_result
   changed_when: "'created' in ingress_install_result.stdout or 'configured' in ingress_install_result.stdout"
+
+- name: Patch ingress-nginx Service to restrict CLB to node subnet
+  command: >
+    kubectl patch svc ingress-nginx-controller -n ingress-nginx
+    -p '{"metadata":{"annotations":{"service.beta.kubernetes.io/aws-load-balancer-subnets":"{{ node_subnet_id_result.stdout | trim }}"}}}'
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  when: node_subnet_id_result.stdout | length > 0
 
 - name: Wait for Ingress Controller to be ready
   command: >

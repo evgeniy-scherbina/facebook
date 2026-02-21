@@ -1,3 +1,8 @@
+output "node_subnet_id" {
+  description = "Subnet ID used for all nodes and CLB"
+  value       = local.node_subnet_id
+}
+
 output "control_plane_id" {
   description = "ID of the control plane instance"
   value       = aws_instance.k8s_control_plane.id
