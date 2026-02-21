@@ -30,24 +30,42 @@
   environment:
     KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
 
-- name: Install NGINX Ingress Controller
-  command: kubectl apply -f {{ user_home_result.stdout }}/facebook/k8s/infrastructure/ingress-nginx/deploy.yaml
+# Annotation must be present when Service is first created so CCM creates CLB in the right subnet.
+# Patching after apply is too late: CCM already creates the CLB with default subnets.
+- name: Copy deploy manifest to temp file for annotation injection
+  copy:
+    src: "{{ user_home_result.stdout }}/facebook/k8s/infrastructure/ingress-nginx/deploy.yaml"
+    dest: /tmp/ingress-nginx-deploy.yaml
+    remote_src: yes
+  become: yes
+  become_user: "{{ kube_user }}"
+
+- name: Inject CLB subnet annotation into Service before first apply
+  replace:
+    path: /tmp/ingress-nginx-deploy.yaml
+    regexp: '  name: ingress-nginx-controller\n  namespace: ingress-nginx\nspec:'
+    replace: '  name: ingress-nginx-controller\n  namespace: ingress-nginx\n  annotations:\n    service.beta.kubernetes.io/aws-load-balancer-subnets: "{{ node_subnet_id_result.stdout | trim }}"\nspec:'
+  become: yes
+  when: node_subnet_id_result.stdout | length > 0
+
+- name: Install NGINX Ingress Controller (with subnet annotation so CLB gets targets)
+  command: kubectl apply -f /tmp/ingress-nginx-deploy.yaml
   become: yes
   become_user: "{{ kube_user }}"
   environment:
     KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
   register: ingress_install_result
   changed_when: "'created' in ingress_install_result.stdout or 'configured' in ingress_install_result.stdout"
+  when: node_subnet_id_result.stdout | length > 0
 
-- name: Patch ingress-nginx Service to restrict CLB to node subnet
-  command: >
-    kubectl patch svc ingress-nginx-controller -n ingress-nginx
-    -p '{"metadata":{"annotations":{"service.beta.kubernetes.io/aws-load-balancer-subnets":"{{ node_subnet_id_result.stdout | trim }}"}}}'
+- name: Install NGINX Ingress Controller (no subnet from SSM, use raw manifest)
+  command: kubectl apply -f {{ user_home_result.stdout }}/facebook/k8s/infrastructure/ingress-nginx/deploy.yaml
   become: yes
   become_user: "{{ kube_user }}"
   environment:
     KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
-  when: node_subnet_id_result.stdout | length > 0
+  register: ingress_install_result
+  when: node_subnet_id_result.stdout | length == 0
 
 - name: Wait for Ingress Controller to be ready
   command: >
