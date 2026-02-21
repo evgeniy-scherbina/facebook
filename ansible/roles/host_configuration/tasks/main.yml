@@ -7,10 +7,20 @@
   changed_when: false
   failed_when: false
 
-- name: Set hostname to EC2 private DNS for CCM node matching
-  hostname:
-    name: "{{ ec2_hostname_result.stdout }}"
+- name: Write EC2 private DNS to /etc/hostname
+  copy:
+    dest: /etc/hostname
+    content: "{{ ec2_hostname_result.stdout }}"
+    owner: root
+    group: root
+    mode: '0644'
   when: ec2_hostname_result.stdout | length > 0
+  become: yes
+
+- name: Apply hostname from /etc/hostname (avoids hostnamectl interactive auth)
+  command: hostname -F /etc/hostname
+  when: ec2_hostname_result.stdout | length > 0
+  become: yes
 
 - name: Create sysctl configuration file for Kubernetes
   copy:
