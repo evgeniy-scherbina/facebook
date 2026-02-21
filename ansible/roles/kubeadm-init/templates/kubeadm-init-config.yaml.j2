@@ -1,5 +1,5 @@
 # Same as: kubeadm init --apiserver-advertise-address=... --apiserver-cert-extra-sans=... --ignore-preflight-errors=NumCPU,Mem
-# plus kubelet --cloud-provider=external (for CCM to set node ProviderID and register ELB instances)
+# plus --cloud-provider=external on kubelet, apiserver, controller-manager (required for CCM to set node ProviderID)
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: InitConfiguration
 localAPIEndpoint:
@@ -25,5 +25,12 @@ apiServer:
 {% if control_plane_public_ip.stdout %}
     - "{{ control_plane_public_ip.stdout }}"
 {% endif %}
+  extraArgs:
+    - name: cloud-provider
+      value: external
+controllerManager:
+  extraArgs:
+    - name: cloud-provider
+      value: external
 networking:
   podSubnet: "192.168.0.0/16"
