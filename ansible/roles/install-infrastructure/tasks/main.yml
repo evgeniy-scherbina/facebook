@@ -101,6 +101,27 @@
   # Don't fail if timeout - controller might still be starting
   ignore_errors: true
 
+# Workaround for CCM race: LB is often created with 0 targets (cloud-provider-aws#301).
+# Restarting CCM triggers EnsureLoadBalancer again so instances get registered.
+- name: Rollout restart AWS Cloud Controller Manager (so CLB gets registered targets)
+  command: kubectl rollout restart daemonset/aws-cloud-controller-manager -n kube-system
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ccm_restart_result
+  changed_when: "'restarted' in ccm_restart_result.stdout"
+
+- name: Wait for CCM to be ready after restart
+  command: kubectl wait --namespace kube-system --for=condition=ready pod -l app=aws-cloud-controller-manager --timeout=120s
+  become: yes
+  become_user: "{{ kube_user }}"
+  environment:
+    KUBECONFIG: "{{ user_home_result.stdout }}/.kube/config"
+  register: ccm_wait_after_restart
+  changed_when: false
+  ignore_errors: true
+
 - name: Display Ingress Controller status
   command: kubectl get pods -n ingress-nginx
   become: yes
