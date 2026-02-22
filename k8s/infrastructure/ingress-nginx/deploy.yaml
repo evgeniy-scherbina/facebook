@@ -401,6 +401,7 @@ metadata:
   name: ingress-nginx-controller
   namespace: ingress-nginx
 spec:
+  replicas: 2
   minReadySeconds: 0
   revisionHistoryLimit: 10
   selector:
@@ -502,6 +503,17 @@ spec:
         - mountPath: /usr/local/certificates/
           name: webhook-cert
           readOnly: true
+      affinity:
+        # Spread controller pods across nodes so each node has a local endpoint (externalTrafficPolicy: Local → all CLB targets InService)
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: controller
+                  app.kubernetes.io/instance: ingress-nginx
+              topologyKey: kubernetes.io/hostname
       dnsPolicy: ClusterFirst
       nodeSelector:
         kubernetes.io/os: linux
