@@ -15,6 +15,7 @@ SERVICES=(
   "real-time-ntfn-service:services/real-time-ntfn/Dockerfile"
   "sum-service:services/sum/Dockerfile"
   "mul-service:services/mul/Dockerfile"
+  "sub-service:services/sub/Dockerfile"
   "calc-service:services/calc/Dockerfile"
 )
 

@@ -46,6 +46,13 @@ spec:
             name: mul-service
             port:
               number: 80
+      - path: /sub
+        pathType: Prefix
+        backend:
+          service:
+            name: sub-service
+            port:
+              number: 80
       - path: /calc
         pathType: Prefix
         backend:
