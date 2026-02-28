@@ -39,3 +39,10 @@ spec:
             name: sum-service
             port:
               number: 80
+      - path: /mul
+        pathType: Prefix
+        backend:
+          service:
+            name: mul-service
+            port:
+              number: 80
