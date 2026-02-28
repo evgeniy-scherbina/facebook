@@ -13,6 +13,8 @@ MAX_IMAGES_TO_KEEP="${MAX_IMAGES_TO_KEEP:-3}"  # Keep 3 most recent images
 SERVICES=(
   "message-service:services/message/Dockerfile"
   "real-time-ntfn-service:services/real-time-ntfn/Dockerfile"
+  "sum-service:services/sum/Dockerfile"
+  "mul-service:services/mul/Dockerfile"
 )
 
 echo "Building and pushing Docker images to ECR Public"
