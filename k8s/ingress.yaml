@@ -32,4 +32,10 @@ spec:
             name: real-time-ntfn-service
             port:
               number: 80
-
+      - path: /sum
+        pathType: Prefix
+        backend:
+          service:
+            name: sum-service
+            port:
+              number: 80
