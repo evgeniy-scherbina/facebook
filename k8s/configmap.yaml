@@ -5,3 +5,5 @@ metadata:
   namespace: chat-app
 data:
   NOTIFICATION_SERVICE_URL: "http://real-time-ntfn-service"
+  SUM_SERVICE_URL: "http://sum-service"
+  MUL_SERVICE_URL: "http://mul-service"
