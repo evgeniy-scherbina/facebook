@@ -15,6 +15,7 @@ SERVICES=(
   "real-time-ntfn-service:services/real-time-ntfn/Dockerfile"
   "sum-service:services/sum/Dockerfile"
   "mul-service:services/mul/Dockerfile"
+  "calc-service:services/calc/Dockerfile"
 )
 
 echo "Building and pushing Docker images to ECR Public"
