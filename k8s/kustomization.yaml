@@ -10,5 +10,6 @@ resources:
   - real-time-ntfn/
   - sum/
   - mul/
+  - sub/
   - calc/
   - ingress.yaml  #  requires installed ingress controller
