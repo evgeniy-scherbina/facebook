@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
       - name: sum-service
-        image: sum-service:latest
-        imagePullPolicy: IfNotPresent
+        image: public.ecr.aws/p9v6t1o7/facebook-chat-sum-service:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
           name: http
