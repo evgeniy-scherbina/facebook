@@ -1,0 +1,7 @@
+{{ .Chart.Name }} v{{ .Chart.Version }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+In-cluster URL (callers in the same namespace):
+  http://{{ include "sum-service.fullname" . }}:{{ .Values.service.port }}
+
+Check it:
+  kubectl get deploy,svc,pods -n {{ .Release.Namespace }} -l {{ include "sum-service.selectorLabels" . }}

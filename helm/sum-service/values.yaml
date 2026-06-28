@@ -1,0 +1,43 @@
+replicaCount: 1
+
+image:
+  repository: public.ecr.aws/p9v6t1o7/facebook-chat-sum-service
+  tag: latest
+  pullPolicy: Always
+
+# Container port the app listens on (matches env PORT below)
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 80            # the Service port (in-cluster callers hit :80)
+
+# Environment variables passed to the container (rendered as name/value pairs)
+env:
+  PORT: "8080"
+
+resources:
+  requests:
+    memory: "32Mi"
+    cpu: "50m"
+  limits:
+    memory: "64Mi"
+    cpu: "100m"
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 3
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 2
