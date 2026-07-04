@@ -1,8 +1,0 @@
-apiVersion: v2
-name: sum-service
-description: Helm chart for the sum microservice (facebook-chat)
-type: application
-# version  = the chart's own version (bump on any chart change)
-version: 0.1.0
-# appVersion = the version of the app being deployed (informational)
-appVersion: "1.0.0"

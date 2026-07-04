@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calc-service
+  labels:
+    {{- include "calc.commonLabels" . | nindent 4 }}
+    app: calc-service
+spec:
+  replicas: {{ .Values.calc.replicaCount }}
+  selector:
+    matchLabels:
+      app: calc-service
+  template:
+    metadata:
+      labels:
+        app: calc-service
+    spec:
+      containers:
+        - name: calc-service
+          image: "{{ .Values.calc.image.repository }}:{{ .Values.calc.image.tag }}"
+          imagePullPolicy: {{ .Values.calc.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.calc.containerPort }}
+          env:
+            - name: PORT
+              value: {{ .Values.calc.containerPort | quote }}
+            {{- range $key, $val := .Values.calc.env }}
+            - name: {{ $key }}
+              value: {{ $val | quote }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.probes.liveness | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

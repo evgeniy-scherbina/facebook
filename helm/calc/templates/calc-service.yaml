@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: calc-service
+  labels:
+    {{- include "calc.commonLabels" . | nindent 4 }}
+    app: calc-service
+spec:
+  type: {{ .Values.calc.service.type }}
+  ports:
+    - port: {{ .Values.calc.service.port }}
+      targetPort: {{ .Values.calc.containerPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: calc-service

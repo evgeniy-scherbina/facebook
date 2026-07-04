@@ -1,0 +1,81 @@
+# ---------------------------------------------------------------------------
+# Shared defaults — identical across all four subservices today.
+# If one service needs to diverge later, move the block into its section below.
+# ---------------------------------------------------------------------------
+probes:
+  liveness:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  readiness:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 3
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 2
+
+resources:
+  requests:
+    memory: "32Mi"
+    cpu: "50m"
+  limits:
+    memory: "64Mi"
+    cpu: "100m"
+
+# ---------------------------------------------------------------------------
+# Per-subservice config
+# ---------------------------------------------------------------------------
+sum:
+  replicaCount: 1
+  image:
+    repository: public.ecr.aws/p9v6t1o7/facebook-chat-sum-service
+    tag: latest
+    pullPolicy: Always
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+
+mul:
+  replicaCount: 1
+  image:
+    repository: public.ecr.aws/p9v6t1o7/facebook-chat-mul-service
+    tag: latest
+    pullPolicy: Always
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+
+sub:
+  replicaCount: 1
+  image:
+    repository: public.ecr.aws/p9v6t1o7/facebook-chat-sub-service
+    tag: latest
+    pullPolicy: Always
+  containerPort: 8080
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30080
+
+calc:
+  replicaCount: 1
+  image:
+    repository: public.ecr.aws/p9v6t1o7/facebook-chat-calc-service
+    tag: latest
+    pullPolicy: Always
+  containerPort: 8080
+  service:
+    type: ClusterIP
+    port: 80
+  # Inlined (self-contained) — no dependency on the external chat-config ConfigMap
+  env:
+    SUM_SERVICE_URL: "http://sum-service"
+    MUL_SERVICE_URL: "http://mul-service"

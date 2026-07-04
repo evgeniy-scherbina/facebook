@@ -1,0 +1,12 @@
+calc service v{{ .Chart.Version }} installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Subservices deployed: sum, mul, sub, calc
+
+Check everything:
+  kubectl get deploy,svc,pods -n {{ .Release.Namespace }} -l app.kubernetes.io/part-of=calc
+
+Notes:
+  - sub-service is exposed via NodePort {{ .Values.sub.service.nodePort }}
+  - calc-service calls:
+      {{ .Values.calc.env.SUM_SERVICE_URL }}
+      {{ .Values.calc.env.MUL_SERVICE_URL }}

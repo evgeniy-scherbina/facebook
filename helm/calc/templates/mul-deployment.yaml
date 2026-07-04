@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mul-service
+  labels:
+    {{- include "calc.commonLabels" . | nindent 4 }}
+    app: mul-service
+spec:
+  replicas: {{ .Values.mul.replicaCount }}
+  selector:
+    matchLabels:
+      app: mul-service
+  template:
+    metadata:
+      labels:
+        app: mul-service
+    spec:
+      containers:
+        - name: mul-service
+          image: "{{ .Values.mul.image.repository }}:{{ .Values.mul.image.tag }}"
+          imagePullPolicy: {{ .Values.mul.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.mul.containerPort }}
+          env:
+            - name: PORT
+              value: {{ .Values.mul.containerPort | quote }}
+          livenessProbe:
+            {{- toYaml .Values.probes.liveness | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
