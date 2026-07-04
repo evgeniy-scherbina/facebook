@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sum-service
+  labels:
+    {{- include "calc.commonLabels" . | nindent 4 }}
+    app: sum-service
+spec:
+  replicas: {{ .Values.sum.replicaCount }}
+  selector:
+    matchLabels:
+      app: sum-service
+  template:
+    metadata:
+      labels:
+        app: sum-service
+    spec:
+      containers:
+        - name: sum-service
+          image: "{{ .Values.sum.image.repository }}:{{ .Values.sum.image.tag }}"
+          imagePullPolicy: {{ .Values.sum.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.sum.containerPort }}
+          env:
+            - name: PORT
+              value: {{ .Values.sum.containerPort | quote }}
+          livenessProbe:
+            {{- toYaml .Values.probes.liveness | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

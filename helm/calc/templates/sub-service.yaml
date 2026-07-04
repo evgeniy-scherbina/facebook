@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sub-service
+  labels:
+    {{- include "calc.commonLabels" . | nindent 4 }}
+    app: sub-service
+spec:
+  type: {{ .Values.sub.service.type }}
+  ports:
+    - port: {{ .Values.sub.service.port }}
+      targetPort: {{ .Values.sub.containerPort }}
+      {{- if .Values.sub.service.nodePort }}
+      nodePort: {{ .Values.sub.service.nodePort }}
+      {{- end }}
+      protocol: TCP
+      name: http
+  selector:
+    app: sub-service

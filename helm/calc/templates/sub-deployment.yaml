@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sub-service
+  labels:
+    {{- include "calc.commonLabels" . | nindent 4 }}
+    app: sub-service
+spec:
+  replicas: {{ .Values.sub.replicaCount }}
+  selector:
+    matchLabels:
+      app: sub-service
+  template:
+    metadata:
+      labels:
+        app: sub-service
+    spec:
+      containers:
+        - name: sub-service
+          image: "{{ .Values.sub.image.repository }}:{{ .Values.sub.image.tag }}"
+          imagePullPolicy: {{ .Values.sub.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.sub.containerPort }}
+          env:
+            - name: PORT
+              value: {{ .Values.sub.containerPort | quote }}
+          livenessProbe:
+            {{- toYaml .Values.probes.liveness | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

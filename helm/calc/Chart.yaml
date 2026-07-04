@@ -1,0 +1,8 @@
+apiVersion: v2
+name: calc
+description: Helm chart for the calc service (sum, mul, sub, calc microservices deployed as one unit)
+type: application
+# version = the calc service's chart version (bump on any change to the chart)
+version: 0.1.0
+# appVersion = informational version of the deployed app
+appVersion: "1.0.0"
