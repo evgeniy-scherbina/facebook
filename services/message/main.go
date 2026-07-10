@@ -1,13 +1,15 @@
 package main
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type MessageRequest struct {
@@ -23,13 +25,17 @@ type MessageResponse struct {
 	Status    string    `json:"status"`
 }
 
-var notificationServiceURL string
+const commentsChannel = "comments"
+
+var rdb *redis.Client
 
 func init() {
-	notificationServiceURL = os.Getenv("NOTIFICATION_SERVICE_URL")
-	if notificationServiceURL == "" {
-		notificationServiceURL = "http://localhost:8081"
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "redis:6379"
 	}
+	rdb = redis.NewClient(&redis.Options{Addr: redisAddr})
+	log.Printf("Redis publisher configured for %s (channel %q)", redisAddr, commentsChannel)
 }
 
 func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,8 +67,8 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		Status:    "sent",
 	}
 
-	// Notify the real-time notification service
-	go notifyRealTimeService(response)
+	// Publish the notification so every real-time-ntfn replica can fan it out
+	go publishNotification(response)
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
@@ -70,8 +76,8 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func notifyRealTimeService(message MessageResponse) {
-	// Prepare notification payload
+func publishNotification(message MessageResponse) {
+	// Payload matches the Notification shape the real-time-ntfn subscribers decode.
 	notificationData := map[string]interface{}{
 		"id":        message.ID,
 		"content":   message.Content,
@@ -86,17 +92,12 @@ func notifyRealTimeService(message MessageResponse) {
 		return
 	}
 
-	// Send HTTP POST to notification service
-	url := notificationServiceURL + "/notify"
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
-	if err != nil {
-		log.Printf("Error notifying real-time service: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Notification service returned status: %d", resp.StatusCode)
+	// Publish to Redis; every real-time-ntfn replica subscribes to this channel
+	// and delivers the message to its own SSE clients (fixes the fan-out bug).
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := rdb.Publish(ctx, commentsChannel, jsonData).Err(); err != nil {
+		log.Printf("Error publishing notification to Redis: %v", err)
 	}
 }
 
@@ -142,7 +143,6 @@ func main() {
 
 	log.Printf("Message service starting on :%s", port)
 	log.Printf("UI available at http://localhost:%s", port)
-	log.Printf("Notification service URL: %s", notificationServiceURL)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
