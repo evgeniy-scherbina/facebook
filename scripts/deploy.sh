@@ -25,10 +25,17 @@ echo ""
 echo "Applying Kubernetes manifests..."
 kubectl apply -k k8s/
 
+# Force pods to re-pull the :latest images. `apply` alone does NOT restart pods
+# when the image tag is unchanged (same ":latest" string => no spec diff => no
+# rollout), so freshly pushed code would otherwise never go live.
 echo ""
-echo "Waiting for deployments to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/message-service -n chat-app || true
-kubectl wait --for=condition=available --timeout=300s deployment/real-time-ntfn-service -n chat-app || true
+echo "Restarting deployments to pick up newly pushed images..."
+kubectl rollout restart deployment/message-service deployment/real-time-ntfn-service -n chat-app
+
+echo ""
+echo "Waiting for rollouts to complete..."
+kubectl rollout status deployment/message-service -n chat-app --timeout=300s
+kubectl rollout status deployment/real-time-ntfn-service -n chat-app --timeout=300s
 
 echo ""
 echo "Deployment status:"
