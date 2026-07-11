@@ -15,17 +15,23 @@ import (
 type MessageRequest struct {
 	Content string `json:"content"`
 	User    string `json:"user,omitempty"`
+	Room    string `json:"room,omitempty"`
 }
 
 type MessageResponse struct {
 	ID        string    `json:"id"`
 	Content   string    `json:"content"`
 	User      string    `json:"user,omitempty"`
+	Room      string    `json:"room"`
 	Timestamp time.Time `json:"timestamp"`
 	Status    string    `json:"status"`
 }
 
-const commentsChannel = "comments"
+// channelPrefix + roomID is the Redis Pub/Sub channel for a room.
+const channelPrefix = "comments:"
+
+// defaultRoom is used when a request omits the room.
+const defaultRoom = "general"
 
 var rdb *redis.Client
 
@@ -35,7 +41,7 @@ func init() {
 		redisAddr = "redis:6379"
 	}
 	rdb = redis.NewClient(&redis.Options{Addr: redisAddr})
-	log.Printf("Redis publisher configured for %s (channel %q)", redisAddr, commentsChannel)
+	log.Printf("Redis publisher configured for %s (channel prefix %q)", redisAddr, channelPrefix)
 }
 
 func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +61,11 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	room := req.Room
+	if room == "" {
+		room = defaultRoom
+	}
+
 	// Generate a simple ID (in production, use UUID)
 	messageID := time.Now().Format("20060102150405.000000")
 
@@ -63,6 +74,7 @@ func sendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		ID:        messageID,
 		Content:   req.Content,
 		User:      req.User,
+		Room:      room,
 		Timestamp: time.Now(),
 		Status:    "sent",
 	}
@@ -82,6 +94,7 @@ func publishNotification(message MessageResponse) {
 		"id":        message.ID,
 		"content":   message.Content,
 		"user":      message.User,
+		"room":      message.Room,
 		"timestamp": message.Timestamp.Format(time.RFC3339),
 		"type":      "message",
 	}
@@ -92,12 +105,13 @@ func publishNotification(message MessageResponse) {
 		return
 	}
 
-	// Publish to Redis; every real-time-ntfn replica subscribes to this channel
-	// and delivers the message to its own SSE clients (fixes the fan-out bug).
+	// Publish to the room's channel; only replicas with viewers in that room are
+	// subscribed to it, and they fan it out to their own SSE clients.
+	channel := channelPrefix + message.Room
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := rdb.Publish(ctx, commentsChannel, jsonData).Err(); err != nil {
-		log.Printf("Error publishing notification to Redis: %v", err)
+	if err := rdb.Publish(ctx, channel, jsonData).Err(); err != nil {
+		log.Printf("Error publishing notification to %s: %v", channel, err)
 	}
 }
 
