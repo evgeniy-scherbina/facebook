@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
+
+const commentsChannel = "comments"
 
 type Notification struct {
 	ID        string    `json:"id"`
@@ -190,6 +195,33 @@ func notifyHandler(hub *Hub) http.HandlerFunc {
 	}
 }
 
+// subscribeRedis subscribes to the shared comments channel and feeds every
+// message into this pod's local hub, which fans it out to this pod's SSE clients.
+// Every replica runs this, so a message published by message-service reaches ALL
+// replicas' clients regardless of which pod handled the write. This is the fix
+// for the fan-out bug.
+func subscribeRedis(hub *Hub) {
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "redis:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
+
+	ctx := context.Background()
+	sub := rdb.Subscribe(ctx, commentsChannel)
+	log.Printf("Subscribed to Redis channel %q at %s", commentsChannel, redisAddr)
+
+	// Channel() manages reconnection internally.
+	for msg := range sub.Channel() {
+		var notification Notification
+		if err := json.Unmarshal([]byte(msg.Payload), &notification); err != nil {
+			log.Printf("Error unmarshaling notification from Redis: %v", err)
+			continue
+		}
+		hub.broadcast <- notification
+	}
+}
+
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
@@ -203,6 +235,7 @@ func main() {
 
 	hub := newHub()
 	go hub.run()
+	go subscribeRedis(hub)
 
 	http.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
 		serveSSE(hub, w, r)

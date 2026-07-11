@@ -6,6 +6,7 @@ namespace: chat-app
 resources:
   - namespace.yaml
   - configmap.yaml
+  - redis/
   - message/
   - real-time-ntfn/
   - ingress.yaml  #  requires installed ingress controller
