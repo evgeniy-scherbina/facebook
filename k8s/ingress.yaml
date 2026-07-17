@@ -20,8 +20,6 @@ spec:
               number: 80
       # /events is handled by events-ingress.yaml (its own Ingress, so the
       # upstream-hash-by:$arg_room annotation applies only to the RTN upstream).
-      # /notify removed: its handler is gone, and sharing the RTN upstream here
-      # (without the hash annotation) would clobber the /events consistent-hash.
       - path: /sum
         pathType: Prefix
         backend:
