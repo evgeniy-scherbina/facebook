@@ -18,20 +18,8 @@ spec:
             name: message-service
             port:
               number: 80
-      - path: /events
-        pathType: Prefix
-        backend:
-          service:
-            name: real-time-ntfn-service
-            port:
-              number: 80
-      - path: /notify
-        pathType: Prefix
-        backend:
-          service:
-            name: real-time-ntfn-service
-            port:
-              number: 80
+      # /events is handled by events-ingress.yaml (its own Ingress, so the
+      # upstream-hash-by:$arg_room annotation applies only to the RTN upstream).
       - path: /sum
         pathType: Prefix
         backend:
