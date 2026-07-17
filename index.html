@@ -202,8 +202,14 @@
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
 
+        // Room to join. Always sent explicitly (never omitted) so the ingress can
+        // consistent-hash /events?room= viewers of the same room onto the same
+        // replica. Override with ?room=<name> in the page URL. Default matches the
+        // server's defaultRoom ("general").
+        const ROOM = new URLSearchParams(window.location.search).get('room') || 'general';
+
         function connectSSE() {
-            const sseUrl = `${NOTIFICATION_SERVICE_URL}/events?client_id=${Date.now()}`;
+            const sseUrl = `${NOTIFICATION_SERVICE_URL}/events?room=${encodeURIComponent(ROOM)}&client_id=${Date.now()}`;
             
             eventSource = new EventSource(sseUrl);
 
@@ -311,7 +317,8 @@
                     },
                     body: JSON.stringify({
                         content: message,
-                        user: 'User' // In a real app, this would come from authentication
+                        user: 'User', // In a real app, this would come from authentication
+                        room: ROOM
                     })
                 });
 

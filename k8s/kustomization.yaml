@@ -9,6 +9,7 @@ resources:
   - redis/
   - message/
   - real-time-ntfn/
-  - ingress.yaml  #  requires installed ingress controller
+  - ingress.yaml         #  requires installed ingress controller
+  - events-ingress.yaml  #  /events with consistent-hash (upstream-hash-by:$arg_room)
   # NOTE: sum/mul/sub/calc are now deployed via the Helm chart at helm/calc/
   # (the ingress.yaml above still routes /sum,/mul,/sub,/calc to those Helm-managed services)
