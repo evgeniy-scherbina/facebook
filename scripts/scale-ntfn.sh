@@ -7,7 +7,7 @@ set -e
 #   ./scripts/scale-ntfn.sh       # scale to 1 replica (working state)
 #   ./scripts/scale-ntfn.sh 2     # scale to 2 replicas (reproduces the fan-out bug)
 
-REPLICAS="${1:-1}"
+REPLICAS="${1:-2}"
 
 kubectl scale deploy/real-time-ntfn-service -n chat-app --replicas="$REPLICAS"
 kubectl rollout status deploy/real-time-ntfn-service -n chat-app --timeout=90s

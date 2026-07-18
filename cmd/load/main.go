@@ -23,7 +23,7 @@ import (
 
 func main() {
 	baseURL := flag.String("url", "http://a000aed69195e47dd85cfde7487c9291-139361245.us-east-1.elb.amazonaws.com", "base URL (ingress ELB)")
-	numRooms := flag.Int("rooms", 3, "number of rooms")
+	numRooms := flag.Int("rooms", 4, "number of rooms")
 	perRoom := flag.Int("clients", 10, "SSE viewers per room")
 	flag.Parse()
 
