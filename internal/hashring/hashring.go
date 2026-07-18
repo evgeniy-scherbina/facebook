@@ -17,11 +17,17 @@ import (
 const defaultVNodes = 150
 
 type Ring struct {
-	mu      sync.RWMutex
-	vnodes  int
-	points  []uint32          // sorted ring positions
-	owner   map[uint32]string // ring position -> member
-	members []string          // current member set (for introspection)
+	mu     sync.RWMutex
+	vnodes int
+	// points holds every virtual-node position, sorted, for binary search.
+	// e.g. [3941022, 90218374, 2731844093, ...]
+	points []uint32
+	// owner maps a ring position back to its member (an RTN pod address).
+	// e.g. 3941022 -> "192.168.168.220:8081"
+	owner map[uint32]string
+	// members is the current member set, for introspection/debugging.
+	// e.g. ["192.168.168.220:8081", "192.168.151.214:8081"]
+	members []string
 }
 
 // New returns an empty ring. vnodes <= 0 uses the default.
@@ -40,8 +46,16 @@ func (r *Ring) Set(members []string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	// Reset for a full rebuild.
+	// [:0] empties the slice but keeps the backing array, so repeated Set calls
+	// reuse the memory instead of reallocating.
 	r.points = r.points[:0]
+	// Fresh map, pre-sized to the exact number of points we're about to insert
+	// (members * vnodes) so it doesn't rehash/grow while we fill it. Maps have no
+	// [:0] equivalent, so we allocate a new one rather than delete every key.
 	r.owner = make(map[uint32]string, len(members)*r.vnodes)
+	// Store our OWN copy of the roster (append to a nil slice = copy). Aliasing
+	// the caller's slice would let them mutate our internal state later.
 	r.members = append([]string(nil), members...)
 
 	for _, m := range members {
