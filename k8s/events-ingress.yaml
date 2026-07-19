@@ -8,7 +8,7 @@ metadata:
     # all viewers of a room land on the SAME replica. That replica is then the
     # only one subscribed to comments:{room} (co-location). This annotation is
     # per-Ingress, which is why /events lives in its own Ingress (not chat-ingress).
-    nginx.ingress.kubernetes.io/upstream-hash-by: "$arg_room"
+#    nginx.ingress.kubernetes.io/upstream-hash-by: "$arg_room"
 spec:
   ingressClassName: nginx
   rules:
