@@ -47,8 +47,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// immediately instead of being buffered until the (never-ending) response ends.
 	rp.FlushInterval = -1
 	rp.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, err error) {
-		// If the chosen pod is gone/unreachable, the client's EventSource will
-		// reconnect and re-hash over the (by then) updated ring.
+		// Chosen pod unreachable (e.g. just died). We return 502. A browser
+		// EventSource treats a non-200 on (re)connect as fatal, so app-level
+		// retry (the frontend has one) keeps re-requesting until discovery drops
+		// the dead pod from the ring and the room re-hashes to a live pod.
 		log.Printf("proxy: room %q -> %s failed: %v", room, member, err)
 		http.Error(w, "upstream error", http.StatusBadGateway)
 	}
