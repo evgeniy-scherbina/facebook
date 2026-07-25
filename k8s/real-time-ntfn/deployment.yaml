@@ -6,7 +6,7 @@ metadata:
   labels:
     app: real-time-ntfn-service
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: real-time-ntfn-service

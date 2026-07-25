@@ -30,12 +30,13 @@ kubectl apply -k k8s/
 # rollout), so freshly pushed code would otherwise never go live.
 echo ""
 echo "Restarting deployments to pick up newly pushed images..."
-kubectl rollout restart deployment/message-service deployment/real-time-ntfn-service -n chat-app
+kubectl rollout restart deployment/message-service deployment/real-time-ntfn-service deployment/dispatcher -n chat-app
 
 echo ""
 echo "Waiting for rollouts to complete..."
 kubectl rollout status deployment/message-service -n chat-app --timeout=300s
 kubectl rollout status deployment/real-time-ntfn-service -n chat-app --timeout=300s
+kubectl rollout status deployment/dispatcher -n chat-app --timeout=300s
 
 echo ""
 echo "Deployment status:"
