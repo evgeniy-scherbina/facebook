@@ -3,9 +3,16 @@ kind: Ingress
 metadata:
   name: events-ingress
   namespace: chat-app
-  # No upstream-hash-by here: the dispatcher does the room->pod consistent
-  # hashing itself. nginx just round-robins /events across dispatcher pods
-  # (every dispatcher computes the same ring, so routing stays consistent).
+  # Two ways to co-locate /events?room= viewers onto one RTN pod:
+  #
+  # (A) ACTIVE — the dispatcher does the room->pod consistent hashing itself.
+  #     nginx just round-robins /events across dispatcher pods (every dispatcher
+  #     computes the same ring, so routing stays consistent).
+  #
+  # (B) ALTERNATIVE — let nginx do the hashing and route straight to RTN pods.
+  #     To switch back: uncomment the annotation below AND change the backend
+  #     service (in the rule) from `dispatcher` to `real-time-ntfn-service`.
+  #   nginx.ingress.kubernetes.io/upstream-hash-by: "$arg_room"
 spec:
   ingressClassName: nginx
   rules:
@@ -15,6 +22,10 @@ spec:
         pathType: Prefix
         backend:
           service:
+            # (A) dispatcher-based co-location (active):
             name: dispatcher
+            # (B) nginx-based co-location: swap to this + uncomment the
+            #     upstream-hash-by annotation above.
+            # name: real-time-ntfn-service
             port:
               number: 80
