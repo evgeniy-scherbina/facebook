@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dispatcher
+  namespace: chat-app
+  labels:
+    app: dispatcher
+spec:
+  # Independent of RTN replica count. Holds all /events SSE connections, so >1
+  # for HA; each replica watches EndpointSlices and computes the same ring.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dispatcher
+  template:
+    metadata:
+      labels:
+        app: dispatcher
+    spec:
+      serviceAccountName: dispatcher
+      containers:
+        - name: dispatcher
+          image: public.ecr.aws/p9v6t1o7/facebook-chat-dispatcher-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: PORT
+              value: "8080"
+            - name: NAMESPACE
+              value: chat-app
+            - name: RTN_SERVICE
+              value: real-time-ntfn-service
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"

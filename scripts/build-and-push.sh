@@ -17,6 +17,7 @@ SERVICES=(
   "mul-service:services/mul/Dockerfile"
   "sub-service:services/sub/Dockerfile"
   "calc-service:services/calc/Dockerfile"
+  "dispatcher-service:services/dispatcher/Dockerfile"
 )
 
 echo "Building and pushing Docker images to ECR Public"

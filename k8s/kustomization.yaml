@@ -9,6 +9,7 @@ resources:
   - redis/
   - message/
   - real-time-ntfn/
+  - dispatcher/          #  consistent-hash router for /events (replaces nginx upstream-hash-by)
   - ingress.yaml         #  requires installed ingress controller
   - events-ingress.yaml  #  /events with consistent-hash (upstream-hash-by:$arg_room)
   # NOTE: sum/mul/sub/calc are now deployed via the Helm chart at helm/calc/
