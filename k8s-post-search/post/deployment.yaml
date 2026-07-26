@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: post-service
-          # NOTE: image not built/pushed yet — needs a build-and-push entry.
-          image: public.ecr.aws/p9v6t1o7/facebook-post-search-post-service:latest
+          # Built by build-and-push.sh (shares the facebook-chat ECR prefix).
+          image: public.ecr.aws/p9v6t1o7/facebook-chat-post-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
