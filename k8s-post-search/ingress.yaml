@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: post-search-ingress
+  namespace: post-search
+# ingressClassName: nginx => served by the existing ingress-nginx controller,
+# so this reuses the SAME AWS ELB as the chat app. No new load balancer.
+# Paths /posts and /search don't collide with chat's paths; nginx merges
+# ingresses onto the shared host by longest-prefix match.
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /posts
+        pathType: Prefix
+        backend:
+          service:
+            name: post-service
+            port:
+              number: 80
+      - path: /search
+        pathType: Prefix
+        backend:
+          service:
+            name: search-service
+            port:
+              number: 80

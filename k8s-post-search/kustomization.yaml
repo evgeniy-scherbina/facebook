@@ -7,3 +7,4 @@ resources:
   - namespace.yaml
   - post/
   - search/
+  - ingress.yaml  # reuses the existing ingress-nginx ELB (paths /posts, /search)

@@ -38,6 +38,20 @@ kubectl rollout status deployment/message-service -n chat-app --timeout=300s
 kubectl rollout status deployment/real-time-ntfn-service -n chat-app --timeout=300s
 kubectl rollout status deployment/dispatcher -n chat-app --timeout=300s
 
+# --- post-search app (separate namespace, shares the same ingress ELB) ---
+echo ""
+echo "Applying post-search manifests..."
+kubectl apply -k k8s-post-search/
+
+echo ""
+echo "Restarting post-search deployments to pick up newly pushed images..."
+kubectl rollout restart deployment/post-service deployment/search-service -n post-search
+
+echo ""
+echo "Waiting for post-search rollouts to complete..."
+kubectl rollout status deployment/post-service -n post-search --timeout=300s
+kubectl rollout status deployment/search-service -n post-search --timeout=300s
+
 echo ""
 echo "Deployment status:"
 echo ""
