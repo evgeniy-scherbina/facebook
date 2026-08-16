@@ -5,6 +5,7 @@ namespace: post-search
 
 resources:
   - namespace.yaml
+  - redis/         # holds the search index (and, for now, the posts themselves)
   - post/
   - search/
   - ingress.yaml  # reuses the existing ingress-nginx ELB (paths /posts, /search)
