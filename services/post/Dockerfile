@@ -6,6 +6,8 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
+# post imports internal/tokenize, so the internal packages must be copied too.
+COPY internal/ ./internal/
 COPY services/post/ ./services/post/
 
 WORKDIR /app/services/post
